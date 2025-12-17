@@ -1675,26 +1675,664 @@ While the UI is mouse-friendly, power users can work entirely via keyboard:
 
 ## 15. UI Technology Stack (Selected)
 
-| Technology | Purpose |
-|------------|---------|
-| **React 18** | UI framework |
-| **Vite** | Build tool, dev server |
-| **Mantine 7** | Component library (modals, buttons, inputs, etc.) |
-| **CSS Modules** | Scoped styling, co-located with components |
-| **Effector** | State management (reactive, predictable) |
-| **React Router 6** | Client-side routing |
-| **react-vtree** | Virtualized tree for large element lists |
-| **patronum** | Effector utilities (debounce, etc.) |
-| **TypeScript** | Type safety |
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **React** | 19.x | UI framework (concurrent features, use() hook) |
+| **Vite** | 6.x | Build tool, dev server, HMR |
+| **Mantine** | 8.x | Component library (modals, buttons, inputs, etc.) |
+| **CSS Modules** | - | Scoped styling, co-located with components |
+| **Effector** | 23.x | State management (reactive, predictable) |
+| **React Router** | 7.x | Client-side routing (data loading, actions) |
+| **@tanstack/react-virtual** | 3.x | Virtualization for large element lists |
+| **patronum** | 2.x | Effector utilities (debounce, spread, etc.) |
+| **TypeScript** | 5.7+ | Type safety, strict mode |
+| **Monaco Editor** | 0.52+ | Code editing (FHIRPath, JSON preview) |
+
+### 15.1 Why These Versions
+
+| Library | Key Features We Use |
+|---------|---------------------|
+| **React 19** | `use()` hook for Effector integration, improved Suspense, Actions |
+| **Mantine 8** | Native CSS, improved tree-shaking, polymorphic components |
+| **React Router 7** | Type-safe routes, data loaders, optimistic UI |
+| **@tanstack/react-virtual** | Best-in-class virtualization, handles 10K+ elements |
 
 ---
 
-## 16. UI State Model (Effector)
+## 16. Element Tree View — Core UI Component
+
+The Element Tree is the **central interaction surface** for the profile builder. It must be highly polished, performant, and feature-rich.
+
+### 16.1 Visual Design
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  🔍 [Filter elements...                    ] [Expand All] [Collapse All]   │
+│  ☐ Show inherited  ☐ Show prohibited  [Modified only ▾]                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ▼ 📦 Patient                                          [base: US Core]    │
+│    │                                                                        │
+│    ├─▼ 📋 identifier                    1..*   MS  ⚠️ 2 slices             │
+│    │   │  ├── system                    1..1   MS  🔗 uri                  │
+│    │   │  ├── value                     1..1   MS                          │
+│    │   │                                                                    │
+│    │   ├─● 🏷️ identifier:SSN            0..1   MS  pattern: urn:oid:2.16...│
+│    │   │     ├── system                 1..1       = urn:oid:2.16.840...   │
+│    │   │     └── value                  1..1   MS                          │
+│    │   │                                                                    │
+│    │   └─● 🏷️ identifier:MRN            1..1   MS  pattern: http://hosp... │
+│    │         ├── system                 1..1       = http://hospital...    │
+│    │         └── value                  1..1   MS                          │
+│    │                                                                        │
+│    ├─▶ 📋 name                          1..*   MS  ▸ 3 children            │
+│    │                                                                        │
+│    ├── 📋 telecom                       0..*                                │
+│    │                                                                        │
+│    ├── 📄 gender                        1..1   MS  🔗 AdministrativeGender │
+│    │                                                                        │
+│    ├── 📄 birthDate                     1..1   MS  📅 date                 │
+│    │                                                                        │
+│    ├─▼ 📋 address                       0..*   MS                          │
+│    │   │  ├── line                      0..*   MS                          │
+│    │   │  ├── city                      0..1   MS                          │
+│    │   │  ├── state                     0..1   MS  🔗 USPSState            │
+│    │   │  └── postalCode                0..1   MS                          │
+│    │   │                                                                    │
+│    │   └─● 🧩 extension:geolocation     0..1       [Geolocation Ext]       │
+│    │                                                                        │
+│    ├── 🚫 deceased[x]                   0..0       ← prohibited            │
+│    │                                                                        │
+│    └─▼ 🧩 extension                     0..*                               │
+│        ├─● extension:race               0..1   MS  [US Core Race]          │
+│        ├─● extension:ethnicity          0..1   MS  [US Core Ethnicity]     │
+│        └─● extension:birthsex           0..1       [US Core Birth Sex]     │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  📊 142 elements • 34 modified • 12 must-support • 3 errors                │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 16.2 Visual Indicators Legend
+
+| Icon/Badge | Meaning | Color |
+|------------|---------|-------|
+| `📦` | Root resource | - |
+| `📋` | Complex element (backbone, object) | - |
+| `📄` | Primitive element (string, date, etc.) | - |
+| `🏷️` | Slice definition | Blue |
+| `🧩` | Extension element | Purple |
+| `🚫` | Prohibited element (0..0) | Red, strikethrough |
+| `MS` | Must Support flag | Green badge |
+| `🔗` | Has terminology binding | Teal |
+| `⚠️` | Has slicing defined | Orange |
+| `●` | Slice instance | Blue dot |
+| `▼/▶` | Expanded/collapsed | Gray |
+| Yellow left border | Modified from base | Yellow |
+| Green left border | Added (new element) | Green |
+| Red left border | Has validation errors | Red |
+| Gray text | Inherited (not modified) | Gray |
+
+### 16.3 Element Row Component
 
 ```typescript
-// stores/profile/model.ts
+// entities/element/ui/ElementRow.tsx
+import { memo } from 'react';
+import { Group, Text, Badge, ActionIcon, Tooltip } from '@mantine/core';
+import { IconChevronDown, IconChevronRight } from '@tabler/icons-react';
+import { useUnit } from 'effector-react';
+import { $selectedElementId, elementSelected } from '../model/element';
+import styles from './ElementRow.module.css';
+import clsx from 'clsx';
+
+interface ElementRowProps {
+  element: ElementNode;
+  depth: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  style: React.CSSProperties; // From virtualizer
+}
+
+export const ElementRow = memo(function ElementRow({
+  element,
+  depth,
+  isExpanded,
+  onToggle,
+  style,
+}: ElementRowProps) {
+  const selectedId = useUnit($selectedElementId);
+  const isSelected = selectedId === element.id;
+  const selectElement = useUnit(elementSelected);
+
+  const hasChildren = element.children.length > 0 || element.slices.length > 0;
+  const isProhibited = element.constraints.max === '0';
+  const isModified = element.changeState === 'Modified';
+  const isAdded = element.changeState === 'Added';
+  const hasErrors = element.diagnostics?.some(d => d.severity === 'error');
+
+  return (
+    <div
+      style={style}
+      className={clsx(styles.row, {
+        [styles.selected]: isSelected,
+        [styles.modified]: isModified,
+        [styles.added]: isAdded,
+        [styles.prohibited]: isProhibited,
+        [styles.hasErrors]: hasErrors,
+      })}
+      onClick={() => selectElement(element.id)}
+      onDoubleClick={onToggle}
+      role="treeitem"
+      aria-selected={isSelected}
+      aria-expanded={hasChildren ? isExpanded : undefined}
+      tabIndex={0}
+    >
+      {/* Indentation */}
+      <div style={{ width: depth * 20 }} className={styles.indent} />
+
+      {/* Expand/collapse toggle */}
+      <div className={styles.toggle}>
+        {hasChildren ? (
+          <ActionIcon
+            size="xs"
+            variant="subtle"
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          >
+            {isExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          </ActionIcon>
+        ) : (
+          <span className={styles.leaf} />
+        )}
+      </div>
+
+      {/* Element icon */}
+      <ElementIcon element={element} />
+
+      {/* Element name */}
+      <Text
+        className={clsx(styles.name, { [styles.inherited]: !isModified && !isAdded })}
+        size="sm"
+        ff="monospace"
+      >
+        {element.sliceName ? `${element.basePath}:${element.sliceName}` : element.path}
+      </Text>
+
+      {/* Cardinality */}
+      <Text className={styles.cardinality} size="xs" c="dimmed">
+        {formatCardinality(element.constraints.min, element.constraints.max)}
+      </Text>
+
+      {/* Badges */}
+      <Group gap={4} className={styles.badges}>
+        {element.constraints.mustSupport && (
+          <Badge size="xs" color="green" variant="filled">MS</Badge>
+        )}
+        {element.constraints.isModifier && (
+          <Badge size="xs" color="red" variant="outline">M!</Badge>
+        )}
+        {element.constraints.binding && (
+          <Tooltip label={element.constraints.binding.valueSet}>
+            <Badge size="xs" color="teal" variant="light">
+              🔗 {getValueSetName(element.constraints.binding.valueSet)}
+            </Badge>
+          </Tooltip>
+        )}
+        {element.slicing && (
+          <Badge size="xs" color="orange" variant="light">
+            ⚠️ {element.slices.length} slices
+          </Badge>
+        )}
+      </Group>
+
+      {/* Type info */}
+      {element.types && element.types.length > 0 && (
+        <Text className={styles.type} size="xs" c="blue.6">
+          {formatTypes(element.types)}
+        </Text>
+      )}
+    </div>
+  );
+});
+```
+
+### 16.4 Element Row Styles
+
+```css
+/* entities/element/ui/ElementRow.module.css */
+.row {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 var(--mantine-spacing-sm);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background-color 0.1s ease;
+  user-select: none;
+}
+
+.row:hover {
+  background-color: var(--mantine-color-gray-1);
+}
+
+.row:focus {
+  outline: none;
+  background-color: var(--mantine-color-blue-0);
+}
+
+.selected {
+  background-color: var(--mantine-color-blue-1);
+}
+
+.selected:hover {
+  background-color: var(--mantine-color-blue-1);
+}
+
+.modified {
+  border-left-color: var(--mantine-color-yellow-5);
+}
+
+.added {
+  border-left-color: var(--mantine-color-green-5);
+}
+
+.prohibited {
+  opacity: 0.6;
+}
+
+.prohibited .name {
+  text-decoration: line-through;
+  color: var(--mantine-color-red-7);
+}
+
+.hasErrors {
+  background-color: var(--mantine-color-red-0);
+}
+
+.hasErrors:hover {
+  background-color: var(--mantine-color-red-1);
+}
+
+.indent {
+  flex-shrink: 0;
+}
+
+.toggle {
+  width: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaf {
+  width: 14px;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: var(--mantine-spacing-xs);
+}
+
+.inherited {
+  color: var(--mantine-color-gray-6);
+}
+
+.cardinality {
+  flex-shrink: 0;
+  width: 48px;
+  text-align: center;
+  font-family: var(--mantine-font-family-monospace);
+}
+
+.badges {
+  flex-shrink: 0;
+  margin-left: var(--mantine-spacing-xs);
+}
+
+.type {
+  flex-shrink: 0;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: var(--mantine-spacing-xs);
+}
+```
+
+### 16.5 Virtualized Tree Implementation
+
+```typescript
+// widgets/element-tree/ui/ElementTree.tsx
+import { useCallback, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { TextInput, Group, Checkbox, Select, ActionIcon, Text } from '@mantine/core';
+import { IconSearch, IconExpandAll, IconFoldDown } from '@tabler/icons-react';
+import { useUnit } from 'effector-react';
+import { ElementRow } from '@/entities/element';
+import {
+  $flattenedElements,
+  $expandedIds,
+  $filterText,
+  $filterOptions,
+  toggleExpanded,
+  expandAll,
+  collapseAll,
+  filterTextChanged,
+  filterOptionsChanged,
+} from '../model/tree-state';
+import styles from './ElementTree.module.css';
+
+export function ElementTree() {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const flattenedElements = useUnit($flattenedElements);
+  const expandedIds = useUnit($expandedIds);
+  const filterText = useUnit($filterText);
+  const filterOptions = useUnit($filterOptions);
+
+  const [
+    onToggle,
+    onExpandAll,
+    onCollapseAll,
+    onFilterTextChange,
+    onFilterOptionsChange,
+  ] = useUnit([
+    toggleExpanded,
+    expandAll,
+    collapseAll,
+    filterTextChanged,
+    filterOptionsChanged,
+  ]);
+
+  // Virtualization - handles 10K+ elements smoothly
+  const virtualizer = useVirtualizer({
+    count: flattenedElements.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 32, // Row height
+    overscan: 20, // Render 20 extra items outside viewport
+  });
+
+  const virtualItems = virtualizer.getVirtualItems();
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Handle arrow keys, Enter, etc.
+    switch (e.key) {
+      case 'ArrowDown':
+        // Move selection down
+        break;
+      case 'ArrowUp':
+        // Move selection up
+        break;
+      case 'ArrowRight':
+        // Expand current node
+        break;
+      case 'ArrowLeft':
+        // Collapse current node
+        break;
+      case 'Enter':
+        // Open constraint panel
+        break;
+    }
+  }, []);
+
+  // Stats
+  const stats = useMemo(() => ({
+    total: flattenedElements.length,
+    modified: flattenedElements.filter(e => e.element.changeState === 'Modified').length,
+    mustSupport: flattenedElements.filter(e => e.element.constraints.mustSupport).length,
+    errors: flattenedElements.filter(e => e.element.diagnostics?.some(d => d.severity === 'error')).length,
+  }), [flattenedElements]);
+
+  return (
+    <div className={styles.container}>
+      {/* Toolbar */}
+      <div className={styles.toolbar}>
+        <TextInput
+          placeholder="Filter elements..."
+          leftSection={<IconSearch size={16} />}
+          value={filterText}
+          onChange={(e) => onFilterTextChange(e.currentTarget.value)}
+          className={styles.search}
+        />
+        <Group gap="xs">
+          <ActionIcon variant="subtle" onClick={onExpandAll} title="Expand All">
+            <IconExpandAll size={18} />
+          </ActionIcon>
+          <ActionIcon variant="subtle" onClick={onCollapseAll} title="Collapse All">
+            <IconFoldDown size={18} />
+          </ActionIcon>
+        </Group>
+      </div>
+
+      {/* Filters */}
+      <div className={styles.filters}>
+        <Checkbox
+          size="xs"
+          label="Show inherited"
+          checked={filterOptions.showInherited}
+          onChange={(e) => onFilterOptionsChange({ showInherited: e.currentTarget.checked })}
+        />
+        <Checkbox
+          size="xs"
+          label="Show prohibited"
+          checked={filterOptions.showProhibited}
+          onChange={(e) => onFilterOptionsChange({ showProhibited: e.currentTarget.checked })}
+        />
+        <Select
+          size="xs"
+          data={[
+            { value: 'all', label: 'All elements' },
+            { value: 'modified', label: 'Modified only' },
+            { value: 'mustSupport', label: 'Must Support only' },
+            { value: 'errors', label: 'With errors only' },
+          ]}
+          value={filterOptions.showMode}
+          onChange={(value) => onFilterOptionsChange({ showMode: value as FilterMode })}
+          className={styles.filterSelect}
+        />
+      </div>
+
+      {/* Virtualized tree */}
+      <div
+        ref={parentRef}
+        className={styles.treeContainer}
+        onKeyDown={handleKeyDown}
+        role="tree"
+        tabIndex={0}
+      >
+        <div
+          style={{
+            height: virtualizer.getTotalSize(),
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualItems.map((virtualItem) => {
+            const item = flattenedElements[virtualItem.index];
+            return (
+              <ElementRow
+                key={item.element.id}
+                element={item.element}
+                depth={item.depth}
+                isExpanded={expandedIds.has(item.element.id)}
+                onToggle={() => onToggle(item.element.id)}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Status bar */}
+      <div className={styles.statusBar}>
+        <Text size="xs" c="dimmed">
+          📊 {stats.total} elements • {stats.modified} modified • {stats.mustSupport} must-support
+          {stats.errors > 0 && <span className={styles.errorCount}> • {stats.errors} errors</span>}
+        </Text>
+      </div>
+    </div>
+  );
+}
+```
+
+### 16.6 Tree State Model (Effector)
+
+```typescript
+// widgets/element-tree/model/tree-state.ts
+import { createStore, createEvent, sample, combine } from 'effector';
+import { $currentProfile } from '@/entities/profile';
+
+// Types
+interface FlattenedElement {
+  element: ElementNode;
+  depth: number;
+  parentId: string | null;
+}
+
+interface FilterOptions {
+  showInherited: boolean;
+  showProhibited: boolean;
+  showMode: 'all' | 'modified' | 'mustSupport' | 'errors';
+}
+
+// Events
+export const toggleExpanded = createEvent<string>();
+export const expandAll = createEvent();
+export const collapseAll = createEvent();
+export const filterTextChanged = createEvent<string>();
+export const filterOptionsChanged = createEvent<Partial<FilterOptions>>();
+
+// Stores
+export const $expandedIds = createStore<Set<string>>(new Set())
+  .on(toggleExpanded, (state, id) => {
+    const next = new Set(state);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    return next;
+  })
+  .on(expandAll, (_, profile) => {
+    // Collect all element IDs that have children
+    return collectExpandableIds(profile);
+  })
+  .on(collapseAll, () => new Set());
+
+export const $filterText = createStore('')
+  .on(filterTextChanged, (_, text) => text);
+
+export const $filterOptions = createStore<FilterOptions>({
+  showInherited: true,
+  showProhibited: true,
+  showMode: 'all',
+}).on(filterOptionsChanged, (state, partial) => ({ ...state, ...partial }));
+
+// Derived: flattened and filtered element list
+export const $flattenedElements = combine(
+  $currentProfile,
+  $expandedIds,
+  $filterText,
+  $filterOptions,
+  (profile, expandedIds, filterText, filterOptions) => {
+    if (!profile?.elementTree) return [];
+
+    const result: FlattenedElement[] = [];
+    const filterLower = filterText.toLowerCase();
+
+    function traverse(node: ElementNode, depth: number, parentId: string | null) {
+      // Apply filters
+      if (!filterOptions.showProhibited && node.constraints.max === '0') {
+        return;
+      }
+      if (!filterOptions.showInherited && node.changeState === 'Inherited') {
+        return;
+      }
+      if (filterOptions.showMode === 'modified' && node.changeState !== 'Modified') {
+        return;
+      }
+      if (filterOptions.showMode === 'mustSupport' && !node.constraints.mustSupport) {
+        return;
+      }
+      if (filterOptions.showMode === 'errors' && !node.diagnostics?.some(d => d.severity === 'error')) {
+        return;
+      }
+      if (filterText && !node.path.toLowerCase().includes(filterLower)) {
+        // Check if any descendants match
+        const hasMatchingDescendant = checkDescendantsMatch(node, filterLower);
+        if (!hasMatchingDescendant) return;
+      }
+
+      result.push({ element: node, depth, parentId });
+
+      // Traverse children if expanded
+      if (expandedIds.has(node.id)) {
+        for (const child of node.children) {
+          traverse(child, depth + 1, node.id);
+        }
+        for (const slice of node.slices) {
+          traverse(slice.element, depth + 1, node.id);
+        }
+      }
+    }
+
+    traverse(profile.elementTree.root, 0, null);
+    return result;
+  }
+);
+
+// Auto-expand to show search matches
+sample({
+  clock: filterTextChanged,
+  source: { profile: $currentProfile, filter: $filterText },
+  filter: ({ filter }) => filter.length >= 2,
+  fn: ({ profile, filter }) => {
+    // Find all ancestors of matching elements and expand them
+    return findAncestorsOfMatches(profile, filter);
+  },
+  target: $expandedIds,
+});
+```
+
+### 16.7 Tree Features Checklist
+
+| Feature | Priority | Status |
+|---------|----------|--------|
+| Virtualized rendering (10K+ elements) | P0 | ⬜ |
+| Keyboard navigation (arrows, Enter) | P0 | ⬜ |
+| Expand/collapse with animation | P0 | ⬜ |
+| Visual state indicators (modified, errors) | P0 | ⬜ |
+| Text search with highlight | P0 | ⬜ |
+| Filter by state (modified, MS, errors) | P1 | ⬜ |
+| Drag to reorder slices | P1 | ⬜ |
+| Context menu (right-click) | P0 | ⬜ |
+| Multi-select (Shift+click, Ctrl+click) | P2 | ⬜ |
+| Copy element path | P1 | ⬜ |
+| Jump to definition (F12) | P1 | ⬜ |
+| Breadcrumb trail for deep elements | P1 | ⬜ |
+| Diff view (compare with base) | P2 | ⬜ |
+| Element preview tooltip on hover | P2 | ⬜ |
+| Accessibility (ARIA tree pattern) | P0 | ⬜ |
+
+---
+
+## 17. UI State Model (Effector)
+
+```typescript
+// entities/profile/model/profile.ts
 import { createStore, createEvent, createEffect, sample, combine } from 'effector';
-import { profileApi } from '@/api/profiles';
+import { profileApi } from '@/shared/api/profiles';
 
 // Types
 interface ProfileState {
@@ -1791,7 +2429,7 @@ sample({
 
 ---
 
-## 17. UI Implementation Notes (CSS Modules)
+## 18. UI Implementation Notes (CSS Modules)
 
 ```css
 /* components/profile/ElementNode/ElementNode.module.css */
@@ -1851,7 +2489,7 @@ sample({
 
 ---
 
-## 18. Build & Deploy
+## 19. Build & Deploy
 
 ```bash
 # Development: run frontend and backend separately
@@ -1871,7 +2509,7 @@ npm run preview      # Runs production build locally
 
 ---
 
-## 19. Next Steps
+## 20. Next Steps
 
 1. **Toolchain alignment (Day 1)**:
    - Align Rust toolchain/MSRV with `maki` (edition 2024) and pin via `rust-toolchain.toml`
