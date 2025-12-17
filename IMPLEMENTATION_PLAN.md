@@ -2509,7 +2509,241 @@ npm run preview      # Runs production build locally
 
 ---
 
-## 20. Next Steps
+## 20. Parallel Development Strategy
+
+### 20.1 Overview
+
+The UI and backend will be developed **in parallel** by different team members or in alternating sprints. To enable this:
+
+- **UI development uses mock data** — no dependency on backend being ready
+- **Backend development uses API tests** — no dependency on UI being ready
+- **Contract-first approach** — API types defined upfront, shared between both
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PARALLEL DEVELOPMENT FLOW                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   Week 1-2          Week 3-4          Week 5-6          Week 7+             │
+│   ────────          ────────          ────────          ──────              │
+│                                                                              │
+│   ┌─────────┐       ┌─────────┐       ┌─────────┐       ┌─────────┐        │
+│   │ Define  │       │ UI with │       │ UI with │       │ Full    │        │
+│   │ API     │──────▶│ Mocks   │──────▶│ Real API│──────▶│ Integr. │        │
+│   │ Contract│       │         │       │         │       │         │        │
+│   └─────────┘       └─────────┘       └─────────┘       └─────────┘        │
+│        │                 ▲                  │                               │
+│        │                 │                  │                               │
+│        ▼                 │                  ▼                               │
+│   ┌─────────┐       ┌─────────┐       ┌─────────┐                          │
+│   │ Backend │       │ Backend │       │ Backend │                          │
+│   │ Stubs   │──────▶│ Impl    │──────▶│ Complete│                          │
+│   │         │       │         │       │         │                          │
+│   └─────────┘       └─────────┘       └─────────┘                          │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 20.2 Mock Data Layer
+
+The UI uses a **mock adapter** that can be swapped for real API calls:
+
+```typescript
+// shared/api/client.ts
+import { createEffect } from 'effector';
+
+// Environment-based switching
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
+
+// Abstract API interface
+export interface ProfileApi {
+  getProfile(id: string): Promise<ProfileState>;
+  updateConstraint(req: UpdateConstraintRequest): Promise<ProfileState>;
+  createProfile(req: CreateProfileRequest): Promise<ProfileState>;
+  // ...
+}
+
+// Real implementation
+const realApi: ProfileApi = {
+  async getProfile(id) {
+    const res = await fetch(`/api/profiles/${id}`);
+    return res.json();
+  },
+  // ...
+};
+
+// Mock implementation
+const mockApi: ProfileApi = {
+  async getProfile(id) {
+    await delay(100); // Simulate network
+    return mockProfiles[id] ?? generateMockProfile(id);
+  },
+  // ...
+};
+
+// Export the active implementation
+export const profileApi: ProfileApi = USE_MOCKS ? mockApi : realApi;
+```
+
+### 20.3 Mock Data Fixtures
+
+```typescript
+// shared/api/mocks/profiles.ts
+import type { ProfileState, ElementNode } from '@/shared/types';
+
+// Realistic mock data based on US Core Patient
+export const mockUSCorePatient: ProfileState = {
+  id: 'us-core-patient-mock',
+  name: 'USCorePatientProfile',
+  baseUrl: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient',
+  canonicalUrl: 'http://example.org/fhir/StructureDefinition/MyPatient',
+  elementTree: {
+    root: {
+      id: 'patient-root',
+      path: 'Patient',
+      changeState: 'Inherited',
+      constraints: { min: 0, max: '*' },
+      children: [
+        {
+          id: 'patient-identifier',
+          path: 'Patient.identifier',
+          changeState: 'Modified',
+          constraints: { min: 1, max: '*', mustSupport: true },
+          slicing: {
+            discriminators: [{ type: 'pattern', path: 'system' }],
+            rules: 'open',
+          },
+          slices: [
+            {
+              name: 'SSN',
+              element: {
+                id: 'patient-identifier-ssn',
+                path: 'Patient.identifier',
+                sliceName: 'SSN',
+                changeState: 'Added',
+                constraints: { min: 0, max: '1', mustSupport: true },
+                children: [/* ... */],
+              },
+            },
+            // ... more slices
+          ],
+          children: [/* ... */],
+        },
+        // ... more elements
+      ],
+    },
+  },
+  canUndo: true,
+  canRedo: false,
+};
+
+// Generate variations for testing
+export function generateMockProfile(seed: string): ProfileState {
+  // Use seed for deterministic generation
+  return {
+    ...mockUSCorePatient,
+    id: seed,
+    name: `MockProfile_${seed}`,
+  };
+}
+
+// Large profile for performance testing (500+ elements)
+export const mockLargeProfile = generateLargeProfile(500);
+```
+
+### 20.4 Development Modes
+
+```bash
+# Start UI with mock data (no backend needed)
+cd web && VITE_USE_MOCKS=true npm run dev
+
+# Start UI with real backend
+cd web && npm run dev  # Expects backend on :3000
+
+# Start backend only (for API testing)
+cargo run -p server
+
+# Start both (production-like)
+npm run dev:full
+```
+
+### 20.5 Shared Type Definitions
+
+Types are defined once and used by both frontend and backend:
+
+```typescript
+// shared/types/api.ts — Generated from OpenAPI or manually maintained
+
+export interface ProfileState {
+  id: string;
+  name: string;
+  baseUrl: string;
+  canonicalUrl: string;
+  elementTree: ElementTreeNode;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+export interface UpdateConstraintRequest {
+  profileId: string;
+  elementPath: string;
+  changes: Partial<ElementConstraints>;
+}
+
+export interface CreateProfileRequest {
+  name: string;
+  baseDefinition: string;
+  template?: string;
+}
+
+// These types can be generated from Rust types via ts-rs or similar
+```
+
+```rust
+// crates/server/src/api/types.rs
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ProfileState {
+    pub id: String,
+    pub name: String,
+    pub base_url: String,
+    pub canonical_url: String,
+    pub element_tree: ElementTreeNode,
+    pub can_undo: bool,
+    pub can_redo: bool,
+}
+
+// Run `cargo test` to generate TypeScript types
+```
+
+### 20.6 Benefits of This Approach
+
+| Benefit | Description |
+|---------|-------------|
+| **No blocking** | UI team never waits for backend, and vice versa |
+| **Fast iteration** | UI can prototype features with instant mock responses |
+| **Realistic testing** | Mocks mirror real data structure exactly |
+| **Easy debugging** | Can switch to mocks to isolate frontend issues |
+| **Demo-ready** | UI works standalone for demos before backend is complete |
+| **Type safety** | Shared types catch contract mismatches at compile time |
+
+### 20.7 Transition Checklist
+
+When connecting real backend to UI:
+
+- [ ] Verify API response shapes match mock shapes
+- [ ] Test error handling (mocks always succeed)
+- [ ] Test loading states with real latency
+- [ ] Test with large datasets (mocks may use small samples)
+- [ ] Remove/disable mock-specific workarounds
+- [ ] Update environment configs for production
+
+---
+
+## 21. Next Steps
 
 1. **Toolchain alignment (Day 1)**:
    - Align Rust toolchain/MSRV with `maki` (edition 2024) and pin via `rust-toolchain.toml`
