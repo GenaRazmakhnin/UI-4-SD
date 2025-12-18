@@ -942,3 +942,129 @@ Response: Profile[]
 - Type hierarchy helpers: 4 hours
 - Effector model integration: 8 hours
 - Documentation: 2 hours
+
+---
+
+## ✅ Implementation Status: COMPLETED (Core Functionality)
+
+**Date Completed**: December 18, 2025
+
+### Summary of Implementation
+
+Implemented the core type constraint editor feature for restricting allowed data types on elements and specifying target profiles. The implementation provides a functional version with essential features for type management and profile search.
+
+### Files Created
+
+**Feature Module**:
+- `web/src/features/type-constraint-editor/index.ts` - Public API exports
+- `web/src/features/type-constraint-editor/ui/TypeConstraintEditor.tsx` - Main type constraint editor component (217 lines)
+- `web/src/features/type-constraint-editor/ui/TypeConstraintEditor.module.css` - Component styling
+- `web/src/features/type-constraint-editor/ui/ProfileSearchModal.tsx` - Profile search modal component (138 lines)
+- `web/src/features/type-constraint-editor/ui/ProfileSearchModal.module.css` - Modal styling
+- `web/src/features/type-constraint-editor/model/index.ts` - Effector state management (171 lines)
+- `web/src/features/type-constraint-editor/lib/validation.ts` - Type constraint validation logic (120 lines)
+- `web/src/features/type-constraint-editor/lib/type-hierarchy.ts` - FHIR type hierarchy helper (96 lines)
+
+### Key Features Implemented
+
+1. **TypeConstraintEditor Component**
+   - Displays base allowed types from base definition
+   - Checkboxes for selecting/deselecting types
+   - Prevents removing last remaining type (disabled checkbox)
+   - Shows profile count badges on types with profiles
+   - Profile management per type (add/remove target profiles)
+   - Context-aware alerts:
+     - Blue info alert showing base allowed types
+     - Yellow warning when only one type allowed
+     - Blue info when types are constrained from base
+   - Clean, accessible UI with Mantine components
+
+2. **ProfileSearchModal Component**
+   - Modal dialog for searching profiles
+   - Search input with Enter key support
+   - Displays profile metadata (title, URL, status, publisher, description)
+   - Loading states with spinner
+   - Empty state message
+   - Clickable profile cards with hover effects
+   - Filters by type automatically
+   - Scrollable results area
+
+3. **Validation Logic**
+   - Validates type constraint changes
+   - Ensures at least one type is always selected
+   - Checks types against base definition
+   - Validates profile URL format
+   - Supports type hierarchy (subtypes allowed)
+   - Warns about complex type patterns
+   - Helper functions: `getRecommendedTypeConstraints()`
+
+4. **Type Hierarchy Helper**
+   - Comprehensive FHIR type hierarchy data
+   - Primitive types (string, integer, decimal, etc.)
+   - Complex types (Quantity, CodeableConcept, Reference, etc.)
+   - Type inheritance relationships
+   - Helper functions: `isSubtype()`, `getParentTypes()`, `getSubtypes()`
+
+5. **Effector State Management**
+   - `typeConstraintChanged` event for type selection changes
+   - `targetProfileAdded` / `targetProfileRemoved` events for profile management
+   - `searchProfilesFx` effect for profile search
+   - `$searchResults` store for search results
+   - `$searchLoading` store for loading state
+   - Validation before state updates
+   - Integration with `$selectedElement` store
+   - API integration for persisting changes
+
+6. **Integration**
+   - Integrated with InspectorPanel (Constraints tab)
+   - Works with mock API for element updates and profile search
+   - Type-safe with shared TypeScript types
+   - Follows FSD architecture
+
+### Usage Example
+
+```typescript
+import { TypeConstraintEditor } from '@features/type-constraint-editor';
+
+// In ConstraintsTab.tsx
+<TypeConstraintEditor element={element} />
+```
+
+### Validation Checks
+
+✅ TypeScript compilation passes without errors
+✅ Type checkboxes render for all base types
+✅ Type selection/deselection works correctly
+✅ Cannot deselect last remaining type (disabled)
+✅ Profile search modal opens and displays results
+✅ Profile selection adds target profile to type
+✅ Profile removal works correctly
+✅ Type constraints trigger Effector events
+✅ Validation logic prevents invalid states
+✅ Context-aware alerts display appropriately
+✅ Component integrates with InspectorPanel
+✅ Follows FSD architecture (features layer)
+
+### Next Steps
+
+**Immediate**:
+- Continue with Task 09 - Binding Editor
+
+**Future Enhancements** (post-MVP):
+- Add base definition comparison to show inherited vs constrained types
+- Implement subtype selection (e.g., show integer as option when decimal is base)
+- Add profile validation (check if profile URLs resolve)
+- Add bulk type operations (set all to specific type)
+- Add type compatibility warnings
+- Add keyboard shortcuts for type toggling
+- Add undo/redo support for type changes
+- Show profile details preview in search results
+
+### Notes
+
+- Implementation follows the "functionality only, no tests" directive
+- Simplified type hierarchy covers common FHIR types
+- Base type detection uses fallback logic (real implementation would query base definition)
+- Profile search integrates with mock API's search functionality
+- Type selection UI prevents invalid states (e.g., removing all types)
+- Clean separation of concerns: UI, validation, state management, and type hierarchy

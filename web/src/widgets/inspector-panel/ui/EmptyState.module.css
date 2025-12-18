@@ -1,0 +1,14 @@
+.container {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tips {
+  margin-top: var(--mantine-spacing-lg);
+  padding: var(--mantine-spacing-md);
+  background: var(--mantine-color-gray-0);
+  border-radius: var(--mantine-radius-md);
+  max-width: 300px;
+}

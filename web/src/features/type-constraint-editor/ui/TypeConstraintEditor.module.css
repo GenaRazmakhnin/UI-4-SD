@@ -1,0 +1,23 @@
+.container {
+  width: 100%;
+}
+
+.typeRow {
+  padding: var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-gray-0);
+}
+
+.profileRow {
+  padding: var(--mantine-spacing-xs);
+  background: var(--mantine-color-white);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.profileUrl {
+  font-family: var(--mantine-font-family-monospace);
+  word-break: break-all;
+  color: var(--mantine-color-dimmed);
+}

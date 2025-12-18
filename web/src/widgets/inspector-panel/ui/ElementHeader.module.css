@@ -1,0 +1,4 @@
+.path {
+  font-family: var(--mantine-font-family-monospace);
+  word-break: break-all;
+}

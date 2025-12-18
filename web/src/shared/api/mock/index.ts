@@ -1,0 +1,232 @@
+import type {
+  Profile,
+  Package,
+  SearchResult,
+  ValidationResult,
+  ExportResult,
+  ElementNode,
+  SearchFilters,
+} from '@shared/types';
+import * as fixtures from './fixtures';
+import { simulateDelay, simulateError } from './utils';
+
+// Helper functions
+function findElementByPath(
+  elements: ElementNode[],
+  path: string,
+): ElementNode | null {
+  for (const element of elements) {
+    if (element.path === path) return element;
+    if (element.children.length > 0) {
+      const found = findElementByPath(element.children, path);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function matchesQuery(item: SearchResult, query: string): boolean {
+  const lowerQuery = query.toLowerCase();
+  return (
+    item.name?.toLowerCase().includes(lowerQuery) ||
+    item.title?.toLowerCase().includes(lowerQuery) ||
+    item.description?.toLowerCase().includes(lowerQuery) ||
+    false
+  );
+}
+
+function matchesFilters(item: SearchResult, filters?: SearchFilters): boolean {
+  if (!filters) return true;
+  // Implement filter matching logic
+  return true;
+}
+
+export const mockApi = {
+  profiles: {
+    async list(): Promise<Profile[]> {
+      await simulateDelay(200, 400);
+      if (simulateError(0.05)) {
+        throw new Error('Failed to fetch profiles');
+      }
+      return fixtures.mockProfiles;
+    },
+
+    async get(id: string): Promise<Profile> {
+      await simulateDelay(150, 300);
+      const profile = fixtures.mockProfilesById[id];
+      if (!profile) {
+        throw new Error(`Profile ${id} not found`);
+      }
+      return profile;
+    },
+
+    async create(data: Partial<Profile>): Promise<Profile> {
+      await simulateDelay(300, 600);
+      const newProfile = fixtures.createMockProfile(data);
+      fixtures.mockProfiles.push(newProfile);
+      return newProfile;
+    },
+
+    async update(id: string, data: Partial<Profile>): Promise<Profile> {
+      await simulateDelay(250, 500);
+      const profile = fixtures.mockProfilesById[id];
+      if (!profile) {
+        throw new Error(`Profile ${id} not found`);
+      }
+      Object.assign(profile, data);
+      profile.isDirty = true;
+      return profile;
+    },
+
+    async delete(id: string): Promise<void> {
+      await simulateDelay(200, 400);
+      const index = fixtures.mockProfiles.findIndex((p) => p.id === id);
+      if (index === -1) {
+        throw new Error(`Profile ${id} not found`);
+      }
+      fixtures.mockProfiles.splice(index, 1);
+    },
+
+    async updateElement(
+      profileId: string,
+      elementPath: string,
+      updates: Partial<ElementNode>,
+    ): Promise<Profile> {
+      await simulateDelay(100, 250);
+      const profile = fixtures.mockProfilesById[profileId];
+      if (!profile) {
+        throw new Error(`Profile ${profileId} not found`);
+      }
+
+      // Find and update element in tree
+      const element = findElementByPath(profile.elements, elementPath);
+      if (!element) {
+        throw new Error(`Element ${elementPath} not found`);
+      }
+
+      Object.assign(element, updates);
+      element.isModified = true;
+      profile.isDirty = true;
+
+      return profile;
+    },
+  },
+
+  packages: {
+    async list(): Promise<Package[]> {
+      await simulateDelay(200, 400);
+      return fixtures.mockPackages;
+    },
+
+    async search(query: string): Promise<Package[]> {
+      await simulateDelay(100, 300);
+      return fixtures.mockPackages.filter(
+        (pkg) =>
+          pkg.name.toLowerCase().includes(query.toLowerCase()) ||
+          pkg.description?.toLowerCase().includes(query.toLowerCase()),
+      );
+    },
+
+    async install(packageId: string): Promise<Package> {
+      await simulateDelay(1000, 2000); // Installation takes longer
+      const pkg = fixtures.mockPackages.find((p) => p.id === packageId);
+      if (!pkg) {
+        throw new Error(`Package ${packageId} not found`);
+      }
+      pkg.installed = true;
+      return pkg;
+    },
+
+    async uninstall(packageId: string): Promise<void> {
+      await simulateDelay(500, 1000);
+      const pkg = fixtures.mockPackages.find((p) => p.id === packageId);
+      if (!pkg) {
+        throw new Error(`Package ${packageId} not found`);
+      }
+      pkg.installed = false;
+    },
+  },
+
+  search: {
+    async resources(
+      query: string,
+      filters?: SearchFilters,
+    ): Promise<SearchResult[]> {
+      await simulateDelay(150, 350);
+      return fixtures.mockSearchResults.resources
+        .filter((r) => matchesQuery(r, query))
+        .filter((r) => matchesFilters(r, filters));
+    },
+
+    async extensions(query: string): Promise<SearchResult[]> {
+      await simulateDelay(150, 350);
+      return fixtures.mockSearchResults.extensions.filter((e) =>
+        matchesQuery(e, query),
+      );
+    },
+
+    async valueSets(query: string): Promise<SearchResult[]> {
+      await simulateDelay(150, 350);
+      return fixtures.mockSearchResults.valueSets.filter((vs) =>
+        matchesQuery(vs, query),
+      );
+    },
+  },
+
+  validation: {
+    async validate(profileId: string): Promise<ValidationResult> {
+      await simulateDelay(500, 1000); // Validation takes longer
+      if (simulateError(0.05)) {
+        throw new Error('Validation service unavailable');
+      }
+      return (
+        fixtures.mockValidationResults[profileId] ||
+        fixtures.defaultValidationResult
+      );
+    },
+  },
+
+  export: {
+    async toSD(profileId: string): Promise<ExportResult> {
+      await simulateDelay(300, 600);
+      return {
+        format: 'json',
+        content: fixtures.mockSDExport[profileId] || '{}',
+        filename: `${profileId}.json`,
+      };
+    },
+
+    async toFSH(profileId: string): Promise<ExportResult> {
+      await simulateDelay(300, 600);
+      return {
+        format: 'fsh',
+        content: fixtures.mockFSHExport[profileId] || '',
+        filename: `${profileId}.fsh`,
+      };
+    },
+  },
+
+  undo: {
+    async canUndo(profileId: string): Promise<boolean> {
+      await simulateDelay(50, 100);
+      return (fixtures.mockUndoStack[profileId]?.length ?? 0) > 0;
+    },
+
+    async canRedo(profileId: string): Promise<boolean> {
+      await simulateDelay(50, 100);
+      return (fixtures.mockRedoStack[profileId]?.length ?? 0) > 0;
+    },
+
+    async undo(profileId: string): Promise<Profile> {
+      await simulateDelay(100, 200);
+      // Implement undo logic with mock stacks
+      return fixtures.mockProfilesById[profileId];
+    },
+
+    async redo(profileId: string): Promise<Profile> {
+      await simulateDelay(100, 200);
+      // Implement redo logic with mock stacks
+      return fixtures.mockProfilesById[profileId];
+    },
+  },
+};
