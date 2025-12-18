@@ -1,0 +1,72 @@
+import { ProfileEditorPage } from '@pages/editor';
+import { NotFoundPage } from '@pages/not-found';
+import { ProjectBrowserPage } from '@pages/project-browser';
+import { SettingsPage } from '@pages/settings';
+import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
+import { RootLayout } from '../layouts/RootLayout';
+
+// Root route with layout
+const rootRoute = createRootRoute({
+  component: RootLayout,
+  notFoundComponent: NotFoundPage,
+});
+
+// Index route - Project Browser
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: ProjectBrowserPage,
+});
+
+// Profile Editor route with dynamic profileId
+const editorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/editor/$profileId',
+  component: ProfileEditorPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      tab: (search.tab as string) || 'constraints',
+    };
+  },
+});
+
+// Settings route
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: SettingsPage,
+});
+
+// About route
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/about',
+  component: () => (
+    <div style={{ padding: '2rem' }}>
+      <h1>About FHIR Profile Builder</h1>
+      <p>A modern tool for building and editing FHIR profiles.</p>
+    </div>
+  ),
+});
+
+// Create route tree
+export const routeTree = rootRoute.addChildren([
+  indexRoute,
+  editorRoute,
+  settingsRoute,
+  aboutRoute,
+]);
+
+// Create router instance
+export const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  defaultPreloadStaleTime: 0,
+});
+
+// Register router for type safety
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}

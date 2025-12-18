@@ -1,0 +1,11 @@
+.appShell {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main {
+  height: calc(100vh - 56px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,13 @@
+.container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.errorCode {
+  max-height: 300px;
+  overflow: auto;
+  width: 100%;
+  font-size: var(--font-xs);
+}
