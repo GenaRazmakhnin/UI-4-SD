@@ -1,0 +1,55 @@
+:root {
+  /* Colors */
+  --primary-color: #228be6;
+  --primary-hover: #1c7ed6;
+
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --text-tertiary: #868e96;
+
+  --border-color: #dee2e6;
+  --hover-bg: #f1f3f5;
+  --selected-bg: #e7f5ff;
+
+  /* Status colors */
+  --success-color: #40c057;
+  --warning-color: #fab005;
+  --error-color: #fa5252;
+  --info-color: #339af0;
+
+  /* Element status colors */
+  --modified-color: #228be6;
+  --new-color: #40c057;
+  --inherited-color: #868e96;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Font sizes */
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-md: 14px;
+  --font-lg: 16px;
+  --font-xl: 18px;
+
+  /* Monospace font */
+  --font-mono: "Fira Code", "Consolas", "Monaco", monospace;
+}
