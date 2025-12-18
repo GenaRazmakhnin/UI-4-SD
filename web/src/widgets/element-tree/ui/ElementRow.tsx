@@ -1,8 +1,9 @@
-import { ActionIcon, Tooltip } from '@mantine/core';
+import { Tooltip } from '@mantine/core';
 import { cn } from '@shared/lib';
 import type { ElementNode } from '@shared/types';
 import { IconChevronRight } from '@tabler/icons-react';
 import { memo } from 'react';
+import type { RowComponentProps } from 'react-window';
 import styles from './ElementRow.module.css';
 import {
   CardinalityBadge,
@@ -19,14 +20,10 @@ export interface ElementRowData {
   onToggle: (path: string) => void;
 }
 
-interface ElementRowProps {
-  index: number;
-  style: React.CSSProperties;
-  data: ElementRowData;
-}
+type ElementRowProps = RowComponentProps<ElementRowData>;
 
-export const ElementRow = memo(({ index, style, data }: ElementRowProps) => {
-  const { elements, expandedPaths, selectedId, onSelect, onToggle } = data;
+export const ElementRow = memo(({ index, style, ariaAttributes, ...rowProps }: ElementRowProps) => {
+  const { elements, expandedPaths, selectedId, onSelect, onToggle } = rowProps;
   const element = elements[index];
 
   if (!element) return null;
@@ -46,11 +43,21 @@ export const ElementRow = memo(({ index, style, data }: ElementRowProps) => {
   return (
     <div
       style={style}
+      {...ariaAttributes}
+      role="treeitem"
+      tabIndex={0}
+      aria-selected={isSelected}
       className={cn(styles.row, {
         [styles.selected]: isSelected,
         [styles.modified]: isModified,
       })}
       onClick={() => onSelect(element)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(element);
+        }
+      }}
     >
       {/* Indentation */}
       <div style={{ width: depth * 20 }} />

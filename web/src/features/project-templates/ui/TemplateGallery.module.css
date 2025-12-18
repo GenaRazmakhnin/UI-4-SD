@@ -1,0 +1,25 @@
+.card {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--mantine-color-blue-4);
+  transform: translateY(-2px);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.selected {
+  border-color: var(--mantine-color-blue-5);
+  background-color: var(--mantine-color-blue-0);
+}
+
+.selected:hover {
+  border-color: var(--mantine-color-blue-6);
+}
+
+@media (prefers-color-scheme: dark) {
+  .selected {
+    background-color: var(--mantine-color-blue-9);
+  }
+}

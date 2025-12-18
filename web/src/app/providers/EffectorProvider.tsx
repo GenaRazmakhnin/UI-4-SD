@@ -1,12 +1,11 @@
-import { fork } from 'effector';
-import { Provider } from 'effector-react';
-
 interface Props {
   children: React.ReactNode;
 }
 
-const scope = fork();
-
+/**
+ * For client-side SPAs, we use Effector stores globally without fork().
+ * fork() is mainly useful for SSR or testing with isolated scopes.
+ */
 export function EffectorProvider({ children }: Props) {
-  return <Provider value={scope}>{children}</Provider>;
+  return <>{children}</>;
 }

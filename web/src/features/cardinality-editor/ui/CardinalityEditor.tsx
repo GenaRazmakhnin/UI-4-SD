@@ -10,7 +10,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
-import { IconInfoCircle, IconUndo } from '@tabler/icons-react';
+import { IconArrowBackUp, IconInfoCircle } from '@tabler/icons-react';
 import { useState } from 'react';
 import { getImpactMessage, parseMaxToNumber, validateCardinality } from '../lib/validation';
 import { cardinalityChanged } from '../model';
@@ -166,7 +166,7 @@ export function CardinalityEditor({ element, onClose }: CardinalityEditorProps) 
             <Button
               size="sm"
               variant="subtle"
-              leftSection={<IconUndo size={16} />}
+              leftSection={<IconArrowBackUp size={16} />}
               onClick={handleReset}
             >
               Reset to Base

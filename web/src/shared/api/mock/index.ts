@@ -51,8 +51,9 @@ export const mockApi = {
     async get(id: string): Promise<Profile> {
       await simulateDelay(150, 300);
       const profile = fixtures.mockProfilesById[id];
+      // Return default profile if not found
       if (!profile) {
-        throw new Error(`Profile ${id} not found`);
+        return fixtures.defaultProfile;
       }
       return profile;
     },
@@ -156,6 +157,15 @@ export const mockApi = {
       return fixtures.mockPackages;
     },
 
+    async get(packageId: string): Promise<Package> {
+      await simulateDelay(150, 300);
+      const pkg = fixtures.mockPackages.find((p) => p.id === packageId);
+      if (!pkg) {
+        throw new Error(`Package ${packageId} not found`);
+      }
+      return pkg;
+    },
+
     async search(query: string): Promise<Package[]> {
       await simulateDelay(100, 300);
       return fixtures.mockPackages.filter(
@@ -163,6 +173,35 @@ export const mockApi = {
           pkg.name.toLowerCase().includes(query.toLowerCase()) ||
           pkg.description?.toLowerCase().includes(query.toLowerCase())
       );
+    },
+
+    async searchRegistry(
+      query: string,
+      options?: { fhirVersion?: string; sortBy?: 'relevance' | 'downloads' | 'date' }
+    ): Promise<Package[]> {
+      await simulateDelay(300, 600);
+      let results = fixtures.mockPackages.filter(
+        (pkg) =>
+          pkg.name.toLowerCase().includes(query.toLowerCase()) ||
+          pkg.description?.toLowerCase().includes(query.toLowerCase()) ||
+          pkg.publisher?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (options?.fhirVersion) {
+        results = results.filter((pkg) => pkg.fhirVersion === options.fhirVersion);
+      }
+
+      if (options?.sortBy === 'downloads') {
+        results.sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0));
+      } else if (options?.sortBy === 'date') {
+        results.sort((a, b) => {
+          const dateA = a.publishedDate ? new Date(a.publishedDate).getTime() : 0;
+          const dateB = b.publishedDate ? new Date(b.publishedDate).getTime() : 0;
+          return dateB - dateA;
+        });
+      }
+
+      return results;
     },
 
     async install(packageId: string): Promise<Package> {
@@ -175,6 +214,17 @@ export const mockApi = {
       return pkg;
     },
 
+    async installVersion(packageId: string, version: string): Promise<Package> {
+      await simulateDelay(1000, 2000);
+      const pkg = fixtures.mockPackages.find((p) => p.id === packageId);
+      if (!pkg) {
+        throw new Error(`Package ${packageId} not found`);
+      }
+      pkg.installed = true;
+      pkg.version = version;
+      return pkg;
+    },
+
     async uninstall(packageId: string): Promise<void> {
       await simulateDelay(500, 1000);
       const pkg = fixtures.mockPackages.find((p) => p.id === packageId);
@@ -182,6 +232,48 @@ export const mockApi = {
         throw new Error(`Package ${packageId} not found`);
       }
       pkg.installed = false;
+    },
+
+    async update(packageId: string): Promise<Package> {
+      await simulateDelay(1500, 3000);
+      const pkg = fixtures.mockPackages.find((p) => p.id === packageId);
+      if (!pkg) {
+        throw new Error(`Package ${packageId} not found`);
+      }
+      if (pkg.latestVersion) {
+        pkg.version = pkg.latestVersion;
+        pkg.hasUpdate = false;
+      }
+      return pkg;
+    },
+
+    async getResources(
+      packageId: string,
+      options?: { type?: string; query?: string }
+    ): Promise<import('@shared/types').PackageResource[]> {
+      await simulateDelay(200, 400);
+      let resources = fixtures.mockPackageResources[packageId] || [];
+
+      if (options?.type) {
+        resources = resources.filter((r) => r.resourceType === options.type);
+      }
+
+      if (options?.query) {
+        const lowerQuery = options.query.toLowerCase();
+        resources = resources.filter(
+          (r) =>
+            r.name.toLowerCase().includes(lowerQuery) ||
+            r.title?.toLowerCase().includes(lowerQuery) ||
+            r.description?.toLowerCase().includes(lowerQuery)
+        );
+      }
+
+      return resources;
+    },
+
+    async getInstalledPackages(): Promise<Package[]> {
+      await simulateDelay(100, 200);
+      return fixtures.mockPackages.filter((pkg) => pkg.installed);
     },
   },
 

@@ -11,7 +11,16 @@ export type {
 } from './extension';
 
 // Package types
-export type { Package, PackageDependency } from './package';
+export type {
+  Package,
+  PackageDependency,
+  PackageInstallProgress,
+  PackageInstallStatus,
+  PackageResource,
+  PackageResourceCounts,
+  PackageSearchResult,
+  PackageVersion,
+} from './package';
 export type {
   BindingConstraint,
   ContactDetail,

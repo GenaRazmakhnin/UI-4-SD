@@ -1,3 +1,4 @@
+import { UndoRedoProvider } from '@features/undo-redo';
 import type { ReactNode } from 'react';
 import { EffectorProvider } from './EffectorProvider';
 import { MantineProvider } from './MantineProvider';
@@ -13,7 +14,9 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <MantineProvider>
       <EffectorProvider>
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <UndoRedoProvider>{children}</UndoRedoProvider>
+        </QueryProvider>
       </EffectorProvider>
     </MantineProvider>
   );

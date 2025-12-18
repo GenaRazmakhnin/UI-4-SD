@@ -1,0 +1,6 @@
+.currentItem {
+  background-color: var(--mantine-color-blue-light);
+  border-radius: var(--mantine-radius-sm);
+  padding: var(--mantine-spacing-xs);
+  margin-left: calc(-1 * var(--mantine-spacing-xs));
+}

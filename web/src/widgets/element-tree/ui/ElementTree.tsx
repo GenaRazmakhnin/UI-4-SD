@@ -1,7 +1,8 @@
 import { Text } from '@mantine/core';
-import { IconFileTree } from '@tabler/icons-react';
+import { IconListTree } from '@tabler/icons-react';
 import { useUnit } from 'effector-react';
-import { FixedSizeList } from 'react-window';
+import { useMemo } from 'react';
+import { List } from 'react-window';
 import {
   $expandedPaths,
   $flattenedElements,
@@ -18,33 +19,37 @@ export function ElementTree() {
   const expandedPaths = useUnit($expandedPaths);
   const selectedId = useUnit($selectedElementId);
 
+  const rowProps = useMemo(
+    () => ({
+      elements,
+      expandedPaths,
+      selectedId,
+      onSelect: elementSelected,
+      onToggle: pathToggled,
+    }),
+    [elements, expandedPaths, selectedId]
+  );
+
   return (
     <div className={styles.container}>
       <ElementTreeToolbar />
       <div className={styles.treeContent}>
         {elements.length === 0 ? (
           <div className={styles.emptyState}>
-            <IconFileTree size={48} stroke={1.5} />
+            <IconListTree size={48} stroke={1.5} />
             <Text size="sm" c="dimmed">
               No elements to display
             </Text>
           </div>
         ) : (
-          <FixedSizeList
-            height={600}
-            itemCount={elements.length}
-            itemSize={32}
-            width="100%"
-            itemData={{
-              elements,
-              expandedPaths,
-              selectedId,
-              onSelect: elementSelected,
-              onToggle: pathToggled,
-            }}
-          >
-            {ElementRow}
-          </FixedSizeList>
+          <List
+            defaultHeight={600}
+            rowCount={elements.length}
+            rowHeight={32}
+            rowComponent={ElementRow}
+            rowProps={rowProps}
+            style={{ height: '100%', width: '100%' }}
+          ></List>
         )}
       </div>
     </div>

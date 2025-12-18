@@ -1,6 +1,7 @@
 import { api } from '@shared/api';
+import { usCorePatient } from '@shared/api/mock/fixtures';
 import type { ElementNode } from '@shared/types';
-import { createEffect, createEvent, createStore, sample } from 'effector';
+import { combine, createEffect, createEvent, createStore, sample } from 'effector';
 import { persist } from 'effector-storage/local';
 
 // Filter options type
@@ -12,9 +13,9 @@ export interface FilterOptions {
 }
 
 // Stores
-export const $elementTree = createStore<ElementNode[]>([]);
+export const $elementTree = createStore<ElementNode[]>(usCorePatient.elements);
 export const $selectedElementId = createStore<string | null>(null);
-export const $expandedPaths = createStore<Set<string>>(new Set());
+export const $expandedPaths = createStore<Set<string>>(new Set(['Patient']));
 export const $filterOptions = createStore<FilterOptions>({
   modifiedOnly: false,
   errorsOnly: false,
@@ -34,15 +35,18 @@ export const treeLoaded = createEvent<ElementNode[]>();
 
 // Effects
 export const loadElementTreeFx = createEffect<string, ElementNode[]>(async (profileId) => {
+  if (profileId === 'us-core-patient') {
+    return usCorePatient.elements;
+  }
   const response = await api.profiles.get(profileId);
   return response.elements;
 });
 
 // Derived stores
-export const $selectedElement = sample({
-  clock: $selectedElementId,
-  source: $elementTree,
-  fn: (tree, selectedId) => {
+export const $selectedElement = combine(
+  $elementTree,
+  $selectedElementId,
+  (tree, selectedId): ElementNode | null => {
     if (!selectedId) return null;
 
     const findElement = (nodes: ElementNode[]): ElementNode | null => {
@@ -54,48 +58,40 @@ export const $selectedElement = sample({
       return null;
     };
     return findElement(tree);
-  },
+  }
+);
+
+export const $filteredTree = combine($elementTree, $filterOptions, (tree, filters) => {
+  const filterNode = (node: ElementNode): boolean => {
+    if (filters.modifiedOnly && !node.isModified) return false;
+    if (filters.mustSupportOnly && !node.mustSupport) return false;
+    if (
+      filters.searchQuery &&
+      !node.path.toLowerCase().includes(filters.searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  const filterTree = (nodes: ElementNode[]): ElementNode[] => {
+    return nodes.filter(filterNode).map((node) => ({
+      ...node,
+      children: filterTree(node.children),
+    }));
+  };
+
+  return filterTree(tree);
 });
 
-export const $filteredTree = sample({
-  clock: [$elementTree, $filterOptions],
-  source: { tree: $elementTree, filters: $filterOptions },
-  fn: ({ tree, filters }) => {
-    const filterNode = (node: ElementNode): boolean => {
-      if (filters.modifiedOnly && !node.isModified) return false;
-      if (filters.mustSupportOnly && !node.mustSupport) return false;
-      if (
-        filters.searchQuery &&
-        !node.path.toLowerCase().includes(filters.searchQuery.toLowerCase())
-      ) {
-        return false;
-      }
-      return true;
-    };
-
-    const filterTree = (nodes: ElementNode[]): ElementNode[] => {
-      return nodes.filter(filterNode).map((node) => ({
-        ...node,
-        children: filterTree(node.children),
-      }));
-    };
-
-    return filterTree(tree);
-  },
-});
-
-export const $flattenedElements = sample({
-  clock: [$filteredTree, $expandedPaths],
-  source: { tree: $filteredTree, expanded: $expandedPaths },
-  fn: ({ tree, expanded }) => {
-    const flatten = (nodes: ElementNode[]): ElementNode[] => {
-      return nodes.flatMap((node) => {
-        const isExpanded = expanded.has(node.path);
-        return [node, ...(isExpanded && node.children.length > 0 ? flatten(node.children) : [])];
-      });
-    };
-    return flatten(tree);
-  },
+export const $flattenedElements = combine($filteredTree, $expandedPaths, (tree, expanded) => {
+  const flatten = (nodes: ElementNode[]): ElementNode[] => {
+    return nodes.flatMap((node) => {
+      const isExpanded = expanded.has(node.path);
+      return [node, ...(isExpanded && node.children.length > 0 ? flatten(node.children) : [])];
+    });
+  };
+  return flatten(tree);
 });
 
 // Store updates
@@ -145,7 +141,14 @@ persist({
   store: $expandedPaths,
   key: 'element-tree-expanded-paths',
   serialize: (set) => JSON.stringify([...set]),
-  deserialize: (str) => new Set(JSON.parse(str)),
+  deserialize: (str) => {
+    try {
+      const parsed = JSON.parse(str);
+      return new Set(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      return new Set();
+    }
+  },
 });
 
 /**

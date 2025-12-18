@@ -1,0 +1,19 @@
+.projectCard {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.projectCard:hover {
+  border-color: var(--mantine-color-blue-4);
+  background-color: var(--mantine-color-blue-0);
+}
+
+.folderIcon {
+  color: var(--mantine-color-blue-5);
+}
+
+@media (prefers-color-scheme: dark) {
+  .projectCard:hover {
+    background-color: var(--mantine-color-dark-5);
+  }
+}

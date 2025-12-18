@@ -1,7 +1,23 @@
 import type { Project } from '@entities/project';
-import { ActionIcon, Anchor, Breadcrumbs, Group, Menu, Text } from '@mantine/core';
+import { UndoRedoToolbar } from '@features/undo-redo';
+import {
+  ActionIcon,
+  Anchor,
+  Breadcrumbs,
+  Divider,
+  Group,
+  Menu,
+  Text,
+  Tooltip,
+} from '@mantine/core';
 import { navigation } from '@shared/lib/navigation';
-import { IconBrandGithub, IconFileCode, IconHelp, IconSettings } from '@tabler/icons-react';
+import {
+  IconBrandGithub,
+  IconFileCode,
+  IconHelp,
+  IconPackage,
+  IconSettings,
+} from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import styles from './TopNavigation.module.css';
 
@@ -35,6 +51,23 @@ export function TopNavigation({ project }: TopNavigationProps) {
 
       {/* Right section - Actions */}
       <Group gap="xs">
+        {/* Undo/Redo */}
+        <UndoRedoToolbar />
+        <Divider orientation="vertical" />
+
+        {/* Packages */}
+        <Tooltip label="FHIR Packages">
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            aria-label="Packages"
+            component={Link}
+            to="/packages"
+          >
+            <IconPackage size={20} />
+          </ActionIcon>
+        </Tooltip>
+
         {/* Help Menu */}
         <Menu position="bottom-end" width={220}>
           <Menu.Target>

@@ -1,5 +1,6 @@
 import { ProfileEditorPage } from '@pages/editor';
 import { NotFoundPage } from '@pages/not-found';
+import { PackagesPage } from '@pages/packages';
 import { ProjectBrowserPage } from '@pages/project-browser';
 import { SettingsPage } from '@pages/settings';
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
@@ -37,6 +38,13 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+// Packages route
+const packagesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/packages',
+  component: PackagesPage,
+});
+
 // About route
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -53,6 +61,7 @@ const aboutRoute = createRoute({
 export const routeTree = rootRoute.addChildren([
   indexRoute,
   editorRoute,
+  packagesRoute,
   settingsRoute,
   aboutRoute,
 ]);

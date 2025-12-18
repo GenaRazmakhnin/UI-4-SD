@@ -47,14 +47,14 @@ Implement the package browser for discovering, installing, and managing FHIR pac
 - Warn on circular dependencies
 
 ## Acceptance Criteria
-- [ ] Package list displays installed packages
-- [ ] Search finds packages from registry
-- [ ] Install package works
+- [x] Package list displays installed packages
+- [x] Search finds packages from registry
+- [x] Install package works
 - [ ] Dependency resolution works
-- [ ] Package details display correctly
-- [ ] Resource browser shows package contents
-- [ ] Uninstall package works
-- [ ] Update detection works
+- [x] Package details display correctly
+- [x] Resource browser shows package contents
+- [x] Uninstall package works
+- [x] Update detection works
 - [ ] Unit tests pass
 - [ ] Integration tests with API
 
@@ -67,3 +67,55 @@ Implement the package browser for discovering, installing, and managing FHIR pac
 
 ## Estimated Complexity
 High - 2 weeks
+
+## Implementation Progress
+
+### Completed
+1. **Package types enhanced** (`web/src/shared/types/package.ts`)
+   - Added `PackageResourceCounts`, `PackageVersion`, `PackageResource`
+   - Added `PackageSearchResult`, `PackageInstallStatus`, `PackageInstallProgress`
+   - Extended `Package` interface with publisher, license, downloadCount, versions, etc.
+
+2. **Mock API extended** (`web/src/shared/api/mock/`)
+   - Enhanced mock packages with full metadata
+   - Added 7 packages with realistic data (US Core, IPA, SDC, IPS, etc.)
+   - Added `mockPackageResources` for resource browsing
+   - New API methods: `get`, `searchRegistry`, `installVersion`, `update`, `getResources`, `getInstalledPackages`
+
+3. **Effector model** (`web/src/widgets/package-browser/model/index.ts`)
+   - Stores: packages, installedPackages, searchResults, selectedPackage, packageResources
+   - Events: viewChanged, packageSelected, searchQueryChanged, filtersChanged, resourceFiltersChanged
+   - Effects: fetchPackagesFx, searchRegistryFx, installPackageFx, uninstallPackageFx, updatePackageFx
+   - Derived stores: filteredInstalledPackages, packagesWithUpdates, updateCount
+
+4. **UI Components** (`web/src/widgets/package-browser/ui/`)
+   - `PackageList.tsx` - displays installed packages with update badges, menu actions
+   - `PackageSearch.tsx` - registry search with filters (FHIR version, sort by)
+   - `PackageDetails.tsx` - detailed view with tabs (overview, resources, dependencies, versions)
+   - `ResourceBrowser.tsx` - browse package resources with type filtering
+   - `PackageBrowser.tsx` - main widget with installed/browse toggle
+
+5. **React Query hooks** (`web/src/entities/package/api/queries.ts`)
+   - Added: `useInstalledPackages`, `usePackage`, `usePackageResources`, `useRegistrySearch`
+   - Added: `useInstallPackageVersion`, `useUpdatePackage`
+
+6. **Widget exports** (`web/src/widgets/package-browser/index.ts`)
+   - All components, stores, events, effects exported
+   - Widget added to `web/src/widgets/index.ts`
+
+7. **Page integration** (`web/src/pages/packages/`)
+   - Created `PackagesPage` component
+   - Added route `/packages` in `web/src/app/routes/index.tsx`
+   - Added navigation icon in `TopNavigation.tsx`
+
+8. **Effector scope fix** (all UI components)
+   - Fixed critical issue where inputs/tabs weren't working
+   - Root cause: events called directly (e.g., `viewChanged(value)`) update root store, not scoped store
+   - Solution: use `useUnit` for both stores AND events, then call the returned functions
+   - Fixed in: `PackageBrowser.tsx`, `PackageList.tsx`, `PackageSearch.tsx`, `PackageDetails.tsx`, `ResourceBrowser.tsx`
+
+### TODO
+- Unit tests
+- Integration tests with real API
+- Dependency graph visualization (R6)
+- Circular dependency detection (R6)
