@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
 import { useUnit } from 'effector-react';
+import { useEffect } from 'react';
 import {
+  $expandedPaths,
   $flattenedElements,
   $selectedElementId,
-  $expandedPaths,
   elementSelected,
   pathToggled,
 } from '../model';
@@ -55,10 +55,7 @@ export function useTreeKeyboard() {
             pathToggled(currentElement.path);
           } else {
             // Move to parent
-            const parentPath = currentElement.path
-              .split('.')
-              .slice(0, -1)
-              .join('.');
+            const parentPath = currentElement.path.split('.').slice(0, -1).join('.');
             const parent = elements.find((el) => el.path === parentPath);
             if (parent) elementSelected(parent);
           }

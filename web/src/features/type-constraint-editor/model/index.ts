@@ -1,8 +1,8 @@
-import { createEvent, createEffect, createStore, sample } from 'effector';
-import { $selectedElement } from '@widgets/element-tree';
 import { api } from '@shared/api';
+import type { ElementNode, Profile, TypeConstraint } from '@shared/types';
+import { $selectedElement } from '@widgets/element-tree';
+import { createEffect, createEvent, createStore, sample } from 'effector';
 import { validateTypeConstraints } from '../lib/validation';
-import type { ElementNode, TypeConstraint, Profile } from '@shared/types';
 
 /**
  * Type constraint changed
@@ -35,20 +35,14 @@ export const targetProfileRemoved = createEvent<{
  * Search profiles effect
  */
 export const searchProfilesFx = createEffect(
-  async ({
-    query,
-    typeFilter,
-  }: {
-    query: string;
-    typeFilter: string;
-  }) => {
+  async ({ query, typeFilter }: { query: string; typeFilter: string }) => {
     // Search for profiles matching type and query
     const results = await api.search.profiles(query, {
       type: [typeFilter],
     });
 
     return results;
-  },
+  }
 );
 
 /**
@@ -75,7 +69,7 @@ const updateTypeConstraintsFx = createEffect(
     return await api.profiles.updateElement(profileId, elementPath, {
       type: types,
     });
-  },
+  }
 );
 
 /**
@@ -113,22 +107,20 @@ sample({
       element,
     };
   },
-  target: createEffect(
-    async ({ profileId, elementPath, types, element }) => {
-      // Validate first
-      const validation = validateTypeConstraints(element, types);
+  target: createEffect(async ({ profileId, elementPath, types, element }) => {
+    // Validate first
+    const validation = validateTypeConstraints(element, types);
 
-      if (validation.isValid) {
-        await updateTypeConstraintsFx({
-          profileId,
-          elementPath,
-          types,
-        });
-      } else {
-        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
-      }
-    },
-  ),
+    if (validation.isValid) {
+      await updateTypeConstraintsFx({
+        profileId,
+        elementPath,
+        types,
+      });
+    } else {
+      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+    }
+  }),
 });
 
 /**

@@ -1,7 +1,7 @@
-import { createStore, createEvent, createEffect, sample } from 'effector';
-import { persist } from 'effector-storage/local';
-import type { ElementNode } from '@shared/types';
 import { api } from '@shared/api';
+import type { ElementNode } from '@shared/types';
+import { createEffect, createEvent, createStore, sample } from 'effector';
+import { persist } from 'effector-storage/local';
 
 // Filter options type
 export interface FilterOptions {
@@ -24,6 +24,7 @@ export const $filterOptions = createStore<FilterOptions>({
 
 // Events
 export const elementSelected = createEvent<ElementNode>();
+export const selectElement = createEvent<string>(); // Select by path
 export const pathToggled = createEvent<string>();
 export const filterChanged = createEvent<Partial<FilterOptions>>();
 export const expandAll = createEvent();
@@ -32,12 +33,10 @@ export const searchQueryChanged = createEvent<string>();
 export const treeLoaded = createEvent<ElementNode[]>();
 
 // Effects
-export const loadElementTreeFx = createEffect<string, ElementNode[]>(
-  async (profileId) => {
-    const response = await api.profiles.get(profileId);
-    return response.elements;
-  },
-);
+export const loadElementTreeFx = createEffect<string, ElementNode[]>(async (profileId) => {
+  const response = await api.profiles.get(profileId);
+  return response.elements;
+});
 
 // Derived stores
 export const $selectedElement = sample({
@@ -75,12 +74,10 @@ export const $filteredTree = sample({
     };
 
     const filterTree = (nodes: ElementNode[]): ElementNode[] => {
-      return nodes
-        .filter(filterNode)
-        .map((node) => ({
-          ...node,
-          children: filterTree(node.children),
-        }));
+      return nodes.filter(filterNode).map((node) => ({
+        ...node,
+        children: filterTree(node.children),
+      }));
     };
 
     return filterTree(tree);
@@ -94,12 +91,7 @@ export const $flattenedElements = sample({
     const flatten = (nodes: ElementNode[]): ElementNode[] => {
       return nodes.flatMap((node) => {
         const isExpanded = expanded.has(node.path);
-        return [
-          node,
-          ...(isExpanded && node.children.length > 0
-            ? flatten(node.children)
-            : []),
-        ];
+        return [node, ...(isExpanded && node.children.length > 0 ? flatten(node.children) : [])];
       });
     };
     return flatten(tree);
@@ -154,4 +146,43 @@ persist({
   key: 'element-tree-expanded-paths',
   serialize: (set) => JSON.stringify([...set]),
   deserialize: (str) => new Set(JSON.parse(str)),
+});
+
+/**
+ * Handle selectElement by path - finds the element and triggers elementSelected
+ */
+sample({
+  clock: selectElement,
+  source: $elementTree,
+  fn: (tree, path) => {
+    const findByPath = (nodes: ElementNode[]): ElementNode | null => {
+      for (const node of nodes) {
+        if (node.path === path) return node;
+        const found = findByPath(node.children);
+        if (found) return found;
+      }
+      return null;
+    };
+    return findByPath(tree);
+  },
+  filter: (element): element is ElementNode => element !== null,
+  target: elementSelected,
+});
+
+/**
+ * When selecting by path, also expand the parent paths
+ */
+sample({
+  clock: selectElement,
+  source: $expandedPaths,
+  fn: (currentPaths, path) => {
+    const newPaths = new Set(currentPaths);
+    // Expand all parent paths
+    const parts = path.split('.');
+    for (let i = 1; i < parts.length; i++) {
+      newPaths.add(parts.slice(0, i).join('.'));
+    }
+    return newPaths;
+  },
+  target: $expandedPaths,
 });

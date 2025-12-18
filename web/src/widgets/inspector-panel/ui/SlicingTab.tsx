@@ -1,19 +1,22 @@
-import { Stack, Title, Button, Alert, Group, Badge, Text } from '@mantine/core';
-import { IconPlus, IconAlertCircle } from '@tabler/icons-react';
+import { SlicingWizard } from '@features/slicing-wizard';
+import { Alert, Badge, Button, Group, Stack, Text, Title } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
+import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
+import { useState } from 'react';
 
 interface SlicingTabProps {
   element: ElementNode;
 }
 
 export function SlicingTab({ element }: SlicingTabProps) {
+  const [wizardOpen, setWizardOpen] = useState(false);
   const canSlice = element.max === '*' || Number(element.max) > 1;
 
   if (!canSlice) {
     return (
       <Alert icon={<IconAlertCircle size={16} />} color="gray">
-        This element cannot be sliced because its maximum cardinality is 1.
-        Only elements with max &gt; 1 or max = * can be sliced.
+        This element cannot be sliced because its maximum cardinality is 1. Only elements with max
+        &gt; 1 or max = * can be sliced.
       </Alert>
     );
   }
@@ -35,10 +38,7 @@ export function SlicingTab({ element }: SlicingTabProps) {
         </Group>
 
         {!hasSlicing ? (
-          <Button
-            leftSection={<IconPlus size={16} />}
-            disabled
-          >
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setWizardOpen(true)}>
             Create Slicing
           </Button>
         ) : (
@@ -71,11 +71,7 @@ export function SlicingTab({ element }: SlicingTabProps) {
                 <Text size="sm" fw={500}>
                   Ordered
                 </Text>
-                <Badge
-                  size="sm"
-                  variant="light"
-                  color={element.slicing.ordered ? 'blue' : 'gray'}
-                >
+                <Badge size="sm" variant="light" color={element.slicing.ordered ? 'blue' : 'gray'}>
                   {element.slicing.ordered ? 'Yes' : 'No'}
                 </Badge>
               </div>
@@ -100,12 +96,7 @@ export function SlicingTab({ element }: SlicingTabProps) {
         <section>
           <Group justify="space-between" mb="sm">
             <Title order={6}>Slices ({slices.length})</Title>
-            <Button
-              size="xs"
-              variant="light"
-              leftSection={<IconPlus size={14} />}
-              disabled
-            >
+            <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} disabled>
               Add Slice
             </Button>
           </Group>
@@ -131,6 +122,9 @@ export function SlicingTab({ element }: SlicingTabProps) {
           </Stack>
         </section>
       )}
+
+      {/* Slicing Wizard */}
+      <SlicingWizard element={element} opened={wizardOpen} onClose={() => setWizardOpen(false)} />
     </Stack>
   );
 }

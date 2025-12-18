@@ -1,18 +1,19 @@
-export { ElementTree } from './ui/ElementTree';
 export { useTreeKeyboard } from './lib/useTreeKeyboard';
 export {
   $elementTree,
-  $selectedElementId,
-  $selectedElement,
   $expandedPaths,
   $filteredTree,
   $flattenedElements,
-  elementSelected,
-  pathToggled,
-  filterChanged,
-  expandAll,
+  $selectedElement,
+  $selectedElementId,
   collapseAll,
-  searchQueryChanged,
-  treeLoaded,
+  elementSelected,
+  expandAll,
+  filterChanged,
   loadElementTreeFx,
+  pathToggled,
+  searchQueryChanged,
+  selectElement,
+  treeLoaded,
 } from './model';
+export { ElementTree } from './ui/ElementTree';

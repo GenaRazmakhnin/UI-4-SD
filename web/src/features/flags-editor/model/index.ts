@@ -1,8 +1,8 @@
-import { createEvent, createEffect, sample } from 'effector';
-import { $selectedElement } from '@widgets/element-tree';
 import { api } from '@shared/api';
-import { validateFlags } from '../lib/validation';
 import type { ElementNode } from '@shared/types';
+import { $selectedElement } from '@widgets/element-tree';
+import { createEffect, createEvent, sample } from 'effector';
+import { validateFlags } from '../lib/validation';
 
 /**
  * Flag changed event
@@ -28,7 +28,7 @@ const updateFlagFx = createEffect(
     updates: Partial<ElementNode>;
   }) => {
     return await api.profiles.updateElement(profileId, elementPath, updates);
-  },
+  }
 );
 
 /**
@@ -50,20 +50,18 @@ sample({
       element,
     };
   },
-  target: createEffect(
-    async ({ profileId, elementPath, updates, element }) => {
-      // Validate first
-      const validation = validateFlags(element, updates);
+  target: createEffect(async ({ profileId, elementPath, updates, element }) => {
+    // Validate first
+    const validation = validateFlags(element, updates);
 
-      if (validation.isValid) {
-        await updateFlagFx({
-          profileId,
-          elementPath,
-          updates,
-        });
-      } else {
-        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
-      }
-    },
-  ),
+    if (validation.isValid) {
+      await updateFlagFx({
+        profileId,
+        elementPath,
+        updates,
+      });
+    } else {
+      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+    }
+  }),
 });

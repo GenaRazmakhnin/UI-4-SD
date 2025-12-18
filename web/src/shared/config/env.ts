@@ -12,8 +12,7 @@ export const config = {
   ENABLE_FSH_EXPORT: import.meta.env.VITE_ENABLE_FSH_EXPORT !== 'false',
 
   // Performance
-  VIRTUALIZATION_THRESHOLD:
-    Number(import.meta.env.VITE_VIRTUALIZATION_THRESHOLD) || 100,
+  VIRTUALIZATION_THRESHOLD: Number(import.meta.env.VITE_VIRTUALIZATION_THRESHOLD) || 100,
   DEBOUNCE_MS: Number(import.meta.env.VITE_DEBOUNCE_MS) || 300,
 } as const;
 

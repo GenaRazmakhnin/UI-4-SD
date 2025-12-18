@@ -1,20 +1,17 @@
 import type {
-  Profile,
+  ElementNode,
+  ExportResult,
   Package,
+  Profile,
+  SearchFilters,
   SearchResult,
   ValidationResult,
-  ExportResult,
-  ElementNode,
-  SearchFilters,
 } from '@shared/types';
 import * as fixtures from './fixtures';
 import { simulateDelay, simulateError } from './utils';
 
 // Helper functions
-function findElementByPath(
-  elements: ElementNode[],
-  path: string,
-): ElementNode | null {
+function findElementByPath(elements: ElementNode[], path: string): ElementNode | null {
   for (const element of elements) {
     if (element.path === path) return element;
     if (element.children.length > 0) {
@@ -90,7 +87,7 @@ export const mockApi = {
     async updateElement(
       profileId: string,
       elementPath: string,
-      updates: Partial<ElementNode>,
+      updates: Partial<ElementNode>
     ): Promise<Profile> {
       await simulateDelay(100, 250);
       const profile = fixtures.mockProfilesById[profileId];
@@ -110,6 +107,47 @@ export const mockApi = {
 
       return profile;
     },
+
+    async addSlice(
+      profileId: string,
+      elementPath: string,
+      slice: {
+        sliceName: string;
+        min: number;
+        max: string;
+        short?: string;
+      }
+    ): Promise<Profile> {
+      await simulateDelay(150, 300);
+      const profile = fixtures.mockProfilesById[profileId];
+      if (!profile) {
+        throw new Error(`Profile ${profileId} not found`);
+      }
+
+      // Find parent element
+      const element = findElementByPath(profile.elements, elementPath);
+      if (!element) {
+        throw new Error(`Element ${elementPath} not found`);
+      }
+
+      // Create new slice element
+      const sliceElement: ElementNode = {
+        id: `${element.id}:${slice.sliceName}`,
+        path: element.path,
+        sliceName: slice.sliceName,
+        min: slice.min,
+        max: slice.max,
+        short: slice.short,
+        isModified: true,
+        children: [],
+      };
+
+      // Add to parent's children
+      element.children.push(sliceElement);
+      profile.isDirty = true;
+
+      return profile;
+    },
   },
 
   packages: {
@@ -123,7 +161,7 @@ export const mockApi = {
       return fixtures.mockPackages.filter(
         (pkg) =>
           pkg.name.toLowerCase().includes(query.toLowerCase()) ||
-          pkg.description?.toLowerCase().includes(query.toLowerCase()),
+          pkg.description?.toLowerCase().includes(query.toLowerCase())
       );
     },
 
@@ -148,28 +186,69 @@ export const mockApi = {
   },
 
   search: {
-    async resources(
-      query: string,
-      filters?: SearchFilters,
-    ): Promise<SearchResult[]> {
+    async resources(query: string, filters?: SearchFilters): Promise<SearchResult[]> {
       await simulateDelay(150, 350);
       return fixtures.mockSearchResults.resources
         .filter((r) => matchesQuery(r, query))
         .filter((r) => matchesFilters(r, filters));
     },
 
-    async extensions(query: string): Promise<SearchResult[]> {
+    async extensions(
+      query: string,
+      filters?: { package?: string[] }
+    ): Promise<import('@shared/types').Extension[]> {
       await simulateDelay(150, 350);
-      return fixtures.mockSearchResults.extensions.filter((e) =>
-        matchesQuery(e, query),
-      );
+      const lowerQuery = query.toLowerCase();
+      return fixtures.mockExtensions.filter((ext) => {
+        const matchesText =
+          !query ||
+          ext.name?.toLowerCase().includes(lowerQuery) ||
+          ext.title?.toLowerCase().includes(lowerQuery) ||
+          ext.description?.toLowerCase().includes(lowerQuery);
+
+        const matchesPackage =
+          !filters?.package ||
+          filters.package.length === 0 ||
+          filters.package.includes(ext.package || '');
+
+        return matchesText && matchesPackage;
+      });
     },
 
-    async valueSets(query: string): Promise<SearchResult[]> {
+    async valueSets(
+      query: string,
+      options?: { codeSystem?: string[] }
+    ): Promise<import('@shared/types').ValueSet[]> {
       await simulateDelay(150, 350);
-      return fixtures.mockSearchResults.valueSets.filter((vs) =>
-        matchesQuery(vs, query),
-      );
+      const lowerQuery = query.toLowerCase();
+      return fixtures.mockValueSets.filter((vs) => {
+        const matchesText =
+          !query ||
+          vs.name?.toLowerCase().includes(lowerQuery) ||
+          vs.title?.toLowerCase().includes(lowerQuery) ||
+          vs.description?.toLowerCase().includes(lowerQuery);
+
+        const matchesCodeSystem =
+          !options?.codeSystem ||
+          options.codeSystem.length === 0 ||
+          vs.compose?.include.some((inc) => options.codeSystem?.includes(inc.system));
+
+        return matchesText && matchesCodeSystem;
+      });
+    },
+  },
+
+  terminology: {
+    async expand(valueSetUrl: string): Promise<import('@shared/types').ValueSetExpansion> {
+      await simulateDelay(300, 800);
+
+      // Return cached expansion if available
+      if (fixtures.mockValueSetExpansions[valueSetUrl]) {
+        return fixtures.mockValueSetExpansions[valueSetUrl];
+      }
+
+      // If not found, return empty expansion
+      throw new Error(`ValueSet ${valueSetUrl} not found or cannot be expanded`);
     },
   },
 
@@ -179,10 +258,7 @@ export const mockApi = {
       if (simulateError(0.05)) {
         throw new Error('Validation service unavailable');
       }
-      return (
-        fixtures.mockValidationResults[profileId] ||
-        fixtures.defaultValidationResult
-      );
+      return fixtures.mockValidationResults[profileId] || fixtures.defaultValidationResult;
     },
   },
 

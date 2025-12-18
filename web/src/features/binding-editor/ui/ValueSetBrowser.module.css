@@ -1,0 +1,19 @@
+.valueSetCard {
+  padding: var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.valueSetCard:hover {
+  background: var(--mantine-color-gray-0);
+  border-color: var(--mantine-color-blue-6);
+  transform: translateY(-1px);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.url {
+  font-family: var(--mantine-font-family-monospace);
+  word-break: break-all;
+}

@@ -1,4 +1,4 @@
-import { Stack, Text, ThemeIcon, List, Paper } from '@mantine/core';
+import { List, Paper, Stack, Text, ThemeIcon } from '@mantine/core';
 import { IconInfoCircle, IconKeyboard } from '@tabler/icons-react';
 import styles from './EmptyState.module.css';
 
@@ -22,10 +22,7 @@ export function EmptyState() {
         {/* Quick Tips */}
         <div className={styles.tips}>
           <Text size="sm" fw={500} mb="xs">
-            <IconKeyboard
-              size={16}
-              style={{ verticalAlign: 'middle', marginRight: 4 }}
-            />
+            <IconKeyboard size={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
             Keyboard Shortcuts
           </Text>
           <List size="xs" spacing="xs" c="dimmed">

@@ -1,15 +1,15 @@
-import { memo } from 'react';
-import { IconChevronRight } from '@tabler/icons-react';
 import { ActionIcon, Tooltip } from '@mantine/core';
-import type { ElementNode } from '@shared/types';
-import {
-  InheritanceIndicator,
-  ConstraintIndicators,
-  CardinalityBadge,
-  FlagIndicators,
-} from './indicators';
-import styles from './ElementRow.module.css';
 import { cn } from '@shared/lib';
+import type { ElementNode } from '@shared/types';
+import { IconChevronRight } from '@tabler/icons-react';
+import { memo } from 'react';
+import styles from './ElementRow.module.css';
+import {
+  CardinalityBadge,
+  ConstraintIndicators,
+  FlagIndicators,
+  InheritanceIndicator,
+} from './indicators';
 
 export interface ElementRowData {
   elements: ElementNode[];

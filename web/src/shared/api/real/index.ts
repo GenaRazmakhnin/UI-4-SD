@@ -1,13 +1,16 @@
-import { apiClient } from '../client';
 import type {
-  Profile,
+  ElementNode,
+  ExportResult,
+  Extension,
   Package,
+  Profile,
+  SearchFilters,
   SearchResult,
   ValidationResult,
-  ExportResult,
-  ElementNode,
-  SearchFilters,
+  ValueSet,
+  ValueSetExpansion,
 } from '@shared/types';
+import { apiClient } from '../client';
 
 /**
  * Real API implementation that connects to the backend
@@ -38,11 +41,27 @@ export const realApi = {
     async updateElement(
       profileId: string,
       elementPath: string,
-      updates: Partial<ElementNode>,
+      updates: Partial<ElementNode>
     ): Promise<Profile> {
       return apiClient.patch<Profile>(
         `/api/profiles/${profileId}/elements/${encodeURIComponent(elementPath)}`,
-        updates,
+        updates
+      );
+    },
+
+    async addSlice(
+      profileId: string,
+      elementPath: string,
+      slice: {
+        sliceName: string;
+        min: number;
+        max: string;
+        short?: string;
+      }
+    ): Promise<Profile> {
+      return apiClient.post<Profile>(
+        `/api/profiles/${profileId}/elements/${encodeURIComponent(elementPath)}/slices`,
+        slice
       );
     },
   },
@@ -66,10 +85,7 @@ export const realApi = {
   },
 
   search: {
-    async resources(
-      query: string,
-      filters?: SearchFilters,
-    ): Promise<SearchResult[]> {
+    async resources(query: string, filters?: SearchFilters): Promise<SearchResult[]> {
       const params = new URLSearchParams({ q: query });
       if (filters?.type) {
         for (const type of filters.type) {
@@ -79,20 +95,38 @@ export const realApi = {
       return apiClient.get<SearchResult[]>(`/api/search/resources?${params}`);
     },
 
-    async extensions(query: string): Promise<SearchResult[]> {
-      return apiClient.get<SearchResult[]>(`/api/search/extensions?q=${query}`);
+    async extensions(query: string, filters?: { package?: string[] }): Promise<Extension[]> {
+      const params = new URLSearchParams({ q: query });
+      if (filters?.package) {
+        for (const pkg of filters.package) {
+          params.append('package', pkg);
+        }
+      }
+      return apiClient.get<Extension[]>(`/api/search/extensions?${params}`);
     },
 
-    async valueSets(query: string): Promise<SearchResult[]> {
-      return apiClient.get<SearchResult[]>(`/api/search/valuesets?q=${query}`);
+    async valueSets(query: string, options?: { codeSystem?: string[] }): Promise<ValueSet[]> {
+      const params = new URLSearchParams({ q: query });
+      if (options?.codeSystem) {
+        for (const system of options.codeSystem) {
+          params.append('codeSystem', system);
+        }
+      }
+      return apiClient.get<ValueSet[]>(`/api/search/valuesets?${params}`);
+    },
+  },
+
+  terminology: {
+    async expand(valueSetUrl: string): Promise<ValueSetExpansion> {
+      return apiClient.get<ValueSetExpansion>(
+        `/api/terminology/expand?url=${encodeURIComponent(valueSetUrl)}`
+      );
     },
   },
 
   validation: {
     async validate(profileId: string): Promise<ValidationResult> {
-      return apiClient.post<ValidationResult>(
-        `/api/validation/validate/${profileId}`,
-      );
+      return apiClient.post<ValidationResult>(`/api/validation/validate/${profileId}`);
     },
   },
 

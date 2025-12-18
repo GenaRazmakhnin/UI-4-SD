@@ -1,8 +1,11 @@
 import type {
-  Profile,
   ElementNode,
+  Extension,
   Package,
+  Profile,
   ValidationResult,
+  ValueSet,
+  ValueSetExpansion,
 } from '@shared/types';
 
 // Mock Profile: US Core Patient (Simple)
@@ -158,14 +161,7 @@ function generateLargeElementTree(count: number): ElementNode[] {
   };
 
   let elementCount = 1;
-  const paths = [
-    'identifier',
-    'name',
-    'telecom',
-    'address',
-    'contact',
-    'communication',
-  ];
+  const paths = ['identifier', 'name', 'telecom', 'address', 'contact', 'communication'];
 
   while (elementCount < count) {
     for (const path of paths) {
@@ -249,8 +245,7 @@ export const mockValidationResults: Record<string, ValidationResult> = {
     errors: [
       {
         severity: 'error',
-        message:
-          'Cardinality constraint violation: min (2) cannot be greater than max (1)',
+        message: 'Cardinality constraint violation: min (2) cannot be greater than max (1)',
         path: 'Observation.component',
         line: 42,
       },
@@ -274,6 +269,598 @@ export const defaultValidationResult: ValidationResult = {
   info: [],
 };
 
+// Mock Extensions
+export const mockExtensions: Extension[] = [
+  {
+    id: 'patient-birthPlace',
+    url: 'http://hl7.org/fhir/StructureDefinition/patient-birthPlace',
+    name: 'birthPlace',
+    title: 'Birth Place',
+    status: 'active',
+    description:
+      "The registered place of birth of the patient. A sytem may use the address.text if they don't store the birthPlace address in discrete elements.",
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['Address'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'patient-birthTime',
+    url: 'http://hl7.org/fhir/StructureDefinition/patient-birthTime',
+    name: 'birthTime',
+    title: 'Birth Time',
+    status: 'active',
+    description:
+      'The time of day that the patient was born. This includes the date to ensure that the timezone information can be communicated effectively.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient.birthDate',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['dateTime'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'patient-mothersMaidenName',
+    url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+    name: 'mothersMaidenName',
+    title: 'Mothers Maiden Name',
+    status: 'active',
+    description:
+      "Mother's maiden (unmarried) name, commonly collected to help verify patient identity.",
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['string'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'patient-nationality',
+    url: 'http://hl7.org/fhir/StructureDefinition/patient-nationality',
+    name: 'nationality',
+    title: 'Nationality',
+    status: 'active',
+    description:
+      'The nationality of the patient. This is a complex extension that includes both a code and a period.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+    ],
+    min: 0,
+    max: '*',
+    isComplex: true,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'patient-disability',
+    url: 'http://hl7.org/fhir/StructureDefinition/patient-disability',
+    name: 'disability',
+    title: 'Disability',
+    status: 'active',
+    description:
+      'A code that identifies the disability or disabilities that affect how the person functions in everyday life.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+    ],
+    min: 0,
+    max: '*',
+    valueTypes: ['CodeableConcept'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'patient-religion',
+    url: 'http://hl7.org/fhir/StructureDefinition/patient-religion',
+    name: 'religion',
+    title: 'Religion',
+    status: 'active',
+    description: "The patient's professed religious affiliations.",
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['CodeableConcept'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'patient-cadavericDonor',
+    url: 'http://hl7.org/fhir/StructureDefinition/patient-cadavericDonor',
+    name: 'cadavericDonor',
+    title: 'Cadaveric Donor',
+    status: 'active',
+    description:
+      'Flag indicating whether the patient authorized the donation of body parts after death.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['boolean'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'us-core-race',
+    url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-race',
+    name: 'race',
+    title: 'US Core Race Extension',
+    status: 'active',
+    description:
+      'Concepts classifying the person into a named category of humans sharing common history, traits, geographical origin or nationality. The race codes used to represent these concepts are based upon the CDC Race and Ethnicity Code Set.',
+    publisher: 'HL7 US Realm Steering Committee',
+    package: 'hl7.fhir.us.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+      {
+        type: 'element',
+        expression: 'RelatedPerson',
+      },
+      {
+        type: 'element',
+        expression: 'Practitioner',
+      },
+      {
+        type: 'element',
+        expression: 'Person',
+      },
+    ],
+    min: 0,
+    max: '1',
+    isComplex: true,
+    fhirVersion: '4.0.1',
+    date: '2020-07-21T00:00:00+00:00',
+    experimental: false,
+  },
+  {
+    id: 'us-core-ethnicity',
+    url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity',
+    name: 'ethnicity',
+    title: 'US Core Ethnicity Extension',
+    status: 'active',
+    description:
+      'Concepts classifying the person into a named category of humans sharing a common real or presumed heritage, history, ancestry, or country of origin. The ethnicity codes used to represent these concepts are based upon the CDC Race and Ethnicity Code Set.',
+    publisher: 'HL7 US Realm Steering Committee',
+    package: 'hl7.fhir.us.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+      {
+        type: 'element',
+        expression: 'RelatedPerson',
+      },
+      {
+        type: 'element',
+        expression: 'Practitioner',
+      },
+      {
+        type: 'element',
+        expression: 'Person',
+      },
+    ],
+    min: 0,
+    max: '1',
+    isComplex: true,
+    fhirVersion: '4.0.1',
+    date: '2020-07-21T00:00:00+00:00',
+    experimental: false,
+  },
+  {
+    id: 'us-core-birthsex',
+    url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex',
+    name: 'birthsex',
+    title: 'US Core Birth Sex Extension',
+    status: 'active',
+    description:
+      "A code classifying the person's sex assigned at birth as specified by the Office of the National Coordinator for Health IT (ONC).",
+    publisher: 'HL7 US Realm Steering Committee',
+    package: 'hl7.fhir.us.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Patient',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['code'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2020-07-21T00:00:00+00:00',
+    experimental: false,
+  },
+  {
+    id: 'observation-bodyPosition',
+    url: 'http://hl7.org/fhir/StructureDefinition/observation-bodyPosition',
+    name: 'bodyPosition',
+    title: 'Body Position',
+    status: 'active',
+    description: 'The position of the body when the observation was made.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Observation',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['CodeableConcept'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'observation-delta',
+    url: 'http://hl7.org/fhir/StructureDefinition/observation-delta',
+    name: 'delta',
+    title: 'Observation Delta',
+    status: 'active',
+    description:
+      'The qualitative change in the value relative to the previous measurement. Usually only recorded if the change is clinically significant.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Observation',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['CodeableConcept'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'resource-effectivePeriod',
+    url: 'http://hl7.org/fhir/StructureDefinition/resource-effectivePeriod',
+    name: 'effectivePeriod',
+    title: 'Effective Period',
+    status: 'active',
+    description:
+      'The period during which the resource content was or is planned to be in active use. Allows establishing a transition period from one resource to another.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'Resource',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['Period'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'humanname-fathers-family',
+    url: 'http://hl7.org/fhir/StructureDefinition/humanname-fathers-family',
+    name: 'fathersFamily',
+    title: "Father's Family Name",
+    status: 'active',
+    description:
+      'Indicates the family name of the father. Useful in cultures where the family name is derived from both parents.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'HumanName.family',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['string'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+  {
+    id: 'humanname-mothers-family',
+    url: 'http://hl7.org/fhir/StructureDefinition/humanname-mothers-family',
+    name: 'mothersFamily',
+    title: "Mother's Family Name",
+    status: 'active',
+    description:
+      'Indicates the family name of the mother. Useful in cultures where the family name is derived from both parents.',
+    publisher: 'HL7 International',
+    package: 'hl7.fhir.r4.core',
+    context: [
+      {
+        type: 'element',
+        expression: 'HumanName.family',
+      },
+    ],
+    min: 0,
+    max: '1',
+    valueTypes: ['string'],
+    isComplex: false,
+    fhirVersion: '4.0.1',
+    date: '2019-11-01T09:29:23+11:00',
+    experimental: false,
+  },
+];
+
+// Mock ValueSets
+export const mockValueSets: ValueSet[] = [
+  {
+    url: 'http://hl7.org/fhir/ValueSet/administrative-gender',
+    name: 'AdministrativeGender',
+    title: 'Administrative Gender',
+    status: 'active',
+    description: 'The gender of a person used for administrative purposes',
+    publisher: 'HL7 International',
+    compose: {
+      include: [
+        {
+          system: 'http://hl7.org/fhir/administrative-gender',
+        },
+      ],
+    },
+  },
+  {
+    url: 'http://hl7.org/fhir/ValueSet/marital-status',
+    name: 'MaritalStatus',
+    title: 'Marital Status Codes',
+    status: 'active',
+    description:
+      'This value set defines the set of codes that can be used to indicate the marital status of a person',
+    publisher: 'HL7 International',
+    compose: {
+      include: [
+        {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        },
+      ],
+    },
+  },
+  {
+    url: 'http://hl7.org/fhir/ValueSet/observation-status',
+    name: 'ObservationStatus',
+    title: 'Observation Status',
+    status: 'active',
+    description: 'Codes providing the status of an observation',
+    publisher: 'HL7 International',
+    compose: {
+      include: [
+        {
+          system: 'http://hl7.org/fhir/observation-status',
+        },
+      ],
+    },
+  },
+  {
+    url: 'http://hl7.org/fhir/ValueSet/contact-point-system',
+    name: 'ContactPointSystem',
+    title: 'Contact Point System',
+    status: 'active',
+    description: 'Telecommunications form for contact point',
+    publisher: 'HL7 International',
+    compose: {
+      include: [
+        {
+          system: 'http://hl7.org/fhir/contact-point-system',
+        },
+      ],
+    },
+  },
+  {
+    url: 'http://loinc.org/vs/LL715-4',
+    name: 'LaboratoryTestResults',
+    title: 'Laboratory Test Results',
+    status: 'active',
+    description: 'LOINC codes for laboratory test results',
+    publisher: 'Regenstrief Institute',
+    compose: {
+      include: [
+        {
+          system: 'http://loinc.org',
+        },
+      ],
+    },
+  },
+  {
+    url: 'http://snomed.info/sct/ValueSet/clinical-findings',
+    name: 'ClinicalFindings',
+    title: 'SNOMED CT Clinical Findings',
+    status: 'active',
+    description: 'SNOMED CT Clinical Findings',
+    publisher: 'SNOMED International',
+    compose: {
+      include: [
+        {
+          system: 'http://snomed.info/sct',
+        },
+      ],
+    },
+  },
+];
+
+// Mock ValueSet Expansions
+export const mockValueSetExpansions: Record<string, ValueSetExpansion> = {
+  'http://hl7.org/fhir/ValueSet/administrative-gender': {
+    total: 4,
+    contains: [
+      {
+        system: 'http://hl7.org/fhir/administrative-gender',
+        code: 'male',
+        display: 'Male',
+      },
+      {
+        system: 'http://hl7.org/fhir/administrative-gender',
+        code: 'female',
+        display: 'Female',
+      },
+      {
+        system: 'http://hl7.org/fhir/administrative-gender',
+        code: 'other',
+        display: 'Other',
+      },
+      {
+        system: 'http://hl7.org/fhir/administrative-gender',
+        code: 'unknown',
+        display: 'Unknown',
+      },
+    ],
+  },
+  'http://hl7.org/fhir/ValueSet/marital-status': {
+    total: 8,
+    contains: [
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'A',
+        display: 'Annulled',
+      },
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'D',
+        display: 'Divorced',
+      },
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'I',
+        display: 'Interlocutory',
+      },
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'L',
+        display: 'Legally Separated',
+      },
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'M',
+        display: 'Married',
+      },
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'P',
+        display: 'Polygamous',
+      },
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'S',
+        display: 'Never Married',
+      },
+      {
+        system: 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus',
+        code: 'W',
+        display: 'Widowed',
+      },
+    ],
+  },
+  'http://hl7.org/fhir/ValueSet/observation-status': {
+    total: 7,
+    contains: [
+      {
+        system: 'http://hl7.org/fhir/observation-status',
+        code: 'registered',
+        display: 'Registered',
+      },
+      {
+        system: 'http://hl7.org/fhir/observation-status',
+        code: 'preliminary',
+        display: 'Preliminary',
+      },
+      {
+        system: 'http://hl7.org/fhir/observation-status',
+        code: 'final',
+        display: 'Final',
+      },
+      {
+        system: 'http://hl7.org/fhir/observation-status',
+        code: 'amended',
+        display: 'Amended',
+      },
+      {
+        system: 'http://hl7.org/fhir/observation-status',
+        code: 'corrected',
+        display: 'Corrected',
+      },
+      {
+        system: 'http://hl7.org/fhir/observation-status',
+        code: 'cancelled',
+        display: 'Cancelled',
+      },
+      {
+        system: 'http://hl7.org/fhir/observation-status',
+        code: 'entered-in-error',
+        display: 'Entered in Error',
+      },
+    ],
+  },
+};
+
 // Mock Search Results
 export const mockSearchResults = {
   resources: [
@@ -282,8 +869,7 @@ export const mockSearchResults = {
       url: 'http://hl7.org/fhir/StructureDefinition/Patient',
       name: 'Patient',
       title: 'Patient Resource',
-      description:
-        'Demographics and other administrative information about an individual',
+      description: 'Demographics and other administrative information about an individual',
       type: 'resource' as const,
     },
     {
@@ -318,11 +904,7 @@ export const mockSearchResults = {
 };
 
 // Export mock profiles as array and by ID
-export const mockProfiles: Profile[] = [
-  usCorePatient,
-  observationWithSlicing,
-  largeProfile,
-];
+export const mockProfiles: Profile[] = [usCorePatient, observationWithSlicing, largeProfile];
 
 export const mockProfilesById: Record<string, Profile> = {
   [usCorePatient.id]: usCorePatient,

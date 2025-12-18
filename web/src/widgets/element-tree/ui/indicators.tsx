@@ -1,17 +1,17 @@
-import { Badge, Tooltip, ActionIcon } from '@mantine/core';
-import {
-  IconPlus,
-  IconEdit,
-  IconLock,
-  IconTarget,
-  IconLink,
-  IconCut,
-  IconX,
-  IconAlertTriangle,
-  IconInfoCircle,
-  IconCheck,
-} from '@tabler/icons-react';
+import { ActionIcon, Badge, Tooltip } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
+import {
+  IconAlertTriangle,
+  IconCheck,
+  IconCut,
+  IconEdit,
+  IconInfoCircle,
+  IconLink,
+  IconLock,
+  IconPlus,
+  IconTarget,
+  IconX,
+} from '@tabler/icons-react';
 
 interface InheritanceIndicatorProps {
   element: ElementNode;
@@ -21,12 +21,7 @@ export function InheritanceIndicator({ element }: InheritanceIndicatorProps) {
   if (element.isModified) {
     return (
       <Tooltip label="Modified from base definition">
-        <Badge
-          color="blue"
-          size="xs"
-          variant="light"
-          leftSection={<IconEdit size={12} />}
-        >
+        <Badge color="blue" size="xs" variant="light" leftSection={<IconEdit size={12} />}>
           MOD
         </Badge>
       </Tooltip>
@@ -52,7 +47,7 @@ export function ConstraintIndicators({ element }: ConstraintIndicatorsProps) {
         <ActionIcon size="xs" color="orange" variant="subtle">
           <IconLink size={14} />
         </ActionIcon>
-      </Tooltip>,
+      </Tooltip>
     );
   }
 
@@ -62,7 +57,7 @@ export function ConstraintIndicators({ element }: ConstraintIndicatorsProps) {
         <ActionIcon size="xs" color="grape" variant="subtle">
           <IconCut size={14} />
         </ActionIcon>
-      </Tooltip>,
+      </Tooltip>
     );
   }
 
@@ -77,11 +72,7 @@ interface CardinalityBadgeProps {
   isModified?: boolean;
 }
 
-export function CardinalityBadge({
-  min,
-  max,
-  isModified,
-}: CardinalityBadgeProps) {
+export function CardinalityBadge({ min, max, isModified }: CardinalityBadgeProps) {
   return (
     <Badge
       size="xs"

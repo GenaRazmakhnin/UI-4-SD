@@ -1,0 +1,35 @@
+.scrollArea {
+  /* Custom styles for scroll area */
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.accordionItem {
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+
+.accordionItem:last-child {
+  border-bottom: none;
+}
+
+.accordionControl {
+  padding: 8px 12px;
+}
+
+.accordionControl:hover {
+  background: var(--mantine-color-gray-0);
+}
+
+.accordionContent {
+  padding: 0 8px 8px 8px;
+}
+
+.groupPath {
+  font-family: monospace;
+  color: var(--mantine-color-dark-6);
+}

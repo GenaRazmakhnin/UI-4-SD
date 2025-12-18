@@ -1,7 +1,7 @@
-import { Stack, Title, Divider, Textarea } from '@mantine/core';
 import { CardinalityEditor } from '@features/cardinality-editor';
 import { FlagsEditor } from '@features/flags-editor';
 import { TypeConstraintEditor } from '@features/type-constraint-editor';
+import { Divider, Stack, Textarea, Title } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
 
 interface ConstraintsTabProps {

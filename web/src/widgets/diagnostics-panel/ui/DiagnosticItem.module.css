@@ -1,0 +1,79 @@
+.item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--mantine-color-white);
+  border: 1px solid transparent;
+}
+
+.item:hover {
+  background: var(--mantine-color-gray-0);
+}
+
+.item:focus {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: -2px;
+}
+
+.item.selected {
+  background: var(--mantine-color-blue-0);
+  border-color: var(--mantine-color-blue-3);
+}
+
+.item.isNew {
+  border-left: 3px solid var(--mantine-color-blue-5);
+  animation: fadeIn 0.3s ease;
+}
+
+.item.isFixed {
+  opacity: 0.6;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.iconWrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.path {
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.fixedText {
+  text-decoration: line-through;
+  color: var(--mantine-color-dimmed);
+}
+
+.actions {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.item:hover .actions,
+.item:focus .actions {
+  opacity: 1;
+}
+
+.item.isFixed .actions {
+  opacity: 1;
+}

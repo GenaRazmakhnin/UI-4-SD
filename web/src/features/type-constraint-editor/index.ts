@@ -1,13 +1,13 @@
-export { TypeConstraintEditor } from './ui/TypeConstraintEditor';
+export { getParentTypes, getSubtypes, isSubtype } from './lib/type-hierarchy';
+export type { TypeValidation } from './lib/validation';
 export {
-  typeConstraintChanged,
+  getRecommendedTypeConstraints,
+  validateTypeConstraints,
+} from './lib/validation';
+export {
+  searchProfilesFx,
   targetProfileAdded,
   targetProfileRemoved,
-  searchProfilesFx,
+  typeConstraintChanged,
 } from './model';
-export {
-  validateTypeConstraints,
-  getRecommendedTypeConstraints,
-} from './lib/validation';
-export { isSubtype, getParentTypes, getSubtypes } from './lib/type-hierarchy';
-export type { TypeValidation } from './lib/validation';
+export { TypeConstraintEditor } from './ui/TypeConstraintEditor';

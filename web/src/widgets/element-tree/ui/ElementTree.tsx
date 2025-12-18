@@ -1,17 +1,17 @@
-import { useUnit } from 'effector-react';
-import { FixedSizeList } from 'react-window';
 import { Text } from '@mantine/core';
 import { IconFileTree } from '@tabler/icons-react';
+import { useUnit } from 'effector-react';
+import { FixedSizeList } from 'react-window';
 import {
-  $flattenedElements,
   $expandedPaths,
+  $flattenedElements,
   $selectedElementId,
   elementSelected,
   pathToggled,
 } from '../model';
 import { ElementRow } from './ElementRow';
-import { ElementTreeToolbar } from './ElementTreeToolbar';
 import styles from './ElementRow.module.css';
+import { ElementTreeToolbar } from './ElementTreeToolbar';
 
 export function ElementTree() {
   const elements = useUnit($flattenedElements);

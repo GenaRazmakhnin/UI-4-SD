@@ -1,0 +1,37 @@
+.container {
+  width: 100%;
+}
+
+.scrollArea {
+  /* Custom scroll area styles if needed */
+}
+
+.centerContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.item.selected {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.pagination {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.resultsCount {
+  text-align: center;
+  margin-top: 8px;
+}

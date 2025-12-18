@@ -1,18 +1,18 @@
-import { useState } from 'react';
 import {
-  NumberInput,
-  TextInput,
-  Group,
-  Stack,
-  Button,
-  Text,
-  Badge,
   Alert,
+  Badge,
+  Button,
   Code,
+  Group,
+  NumberInput,
+  Stack,
+  Text,
+  TextInput,
 } from '@mantine/core';
-import { IconUndo, IconInfoCircle } from '@tabler/icons-react';
 import type { ElementNode } from '@shared/types';
-import { validateCardinality, getImpactMessage, parseMaxToNumber } from '../lib/validation';
+import { IconInfoCircle, IconUndo } from '@tabler/icons-react';
+import { useState } from 'react';
+import { getImpactMessage, parseMaxToNumber, validateCardinality } from '../lib/validation';
 import { cardinalityChanged } from '../model';
 import styles from './CardinalityEditor.module.css';
 
@@ -21,10 +21,7 @@ interface CardinalityEditorProps {
   onClose?: () => void;
 }
 
-export function CardinalityEditor({
-  element,
-  onClose,
-}: CardinalityEditorProps) {
+export function CardinalityEditor({ element, onClose }: CardinalityEditorProps) {
   const [min, setMin] = useState(element.min);
   const [max, setMax] = useState(element.max);
 

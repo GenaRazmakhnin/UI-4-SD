@@ -1,24 +1,12 @@
+import { ActionIcon, Button, Group, Switch, TextInput, Tooltip } from '@mantine/core';
+import { IconChevronDown, IconChevronRight, IconFilter, IconSearch } from '@tabler/icons-react';
 import { useUnit } from 'effector-react';
 import {
-  TextInput,
-  Group,
-  Button,
-  Switch,
-  ActionIcon,
-  Tooltip,
-} from '@mantine/core';
-import {
-  IconSearch,
-  IconChevronDown,
-  IconChevronRight,
-  IconFilter,
-} from '@tabler/icons-react';
-import {
   $filterOptions,
+  collapseAll,
+  expandAll,
   filterChanged,
   searchQueryChanged,
-  expandAll,
-  collapseAll,
 } from '../model';
 
 export function ElementTreeToolbar() {
@@ -38,21 +26,13 @@ export function ElementTreeToolbar() {
 
         <Group gap="xs">
           <Tooltip label="Expand all">
-            <ActionIcon
-              variant="subtle"
-              onClick={() => expandAll()}
-              aria-label="Expand all"
-            >
+            <ActionIcon variant="subtle" onClick={() => expandAll()} aria-label="Expand all">
               <IconChevronDown size={18} />
             </ActionIcon>
           </Tooltip>
 
           <Tooltip label="Collapse all">
-            <ActionIcon
-              variant="subtle"
-              onClick={() => collapseAll()}
-              aria-label="Collapse all"
-            >
+            <ActionIcon variant="subtle" onClick={() => collapseAll()} aria-label="Collapse all">
               <IconChevronRight size={18} />
             </ActionIcon>
           </Tooltip>
@@ -64,17 +44,13 @@ export function ElementTreeToolbar() {
           label="Modified only"
           size="sm"
           checked={filters.modifiedOnly}
-          onChange={(e) =>
-            filterChanged({ modifiedOnly: e.currentTarget.checked })
-          }
+          onChange={(e) => filterChanged({ modifiedOnly: e.currentTarget.checked })}
         />
         <Switch
           label="Must Support only"
           size="sm"
           checked={filters.mustSupportOnly}
-          onChange={(e) =>
-            filterChanged({ mustSupportOnly: e.currentTarget.checked })
-          }
+          onChange={(e) => filterChanged({ mustSupportOnly: e.currentTarget.checked })}
         />
       </Group>
     </div>

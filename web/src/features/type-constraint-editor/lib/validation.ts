@@ -12,7 +12,7 @@ export interface TypeValidation {
  */
 export function validateTypeConstraints(
   element: ElementNode,
-  newTypes: TypeConstraint[],
+  newTypes: TypeConstraint[]
 ): TypeValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -26,9 +26,7 @@ export function validateTypeConstraints(
   const baseTypes = getBaseAllowedTypes(element);
   newTypes.forEach((newType) => {
     if (!isValidTypeRestriction(newType.code, baseTypes)) {
-      errors.push(
-        `Type "${newType.code}" is not allowed in the base definition`,
-      );
+      errors.push(`Type "${newType.code}" is not allowed in the base definition`);
     }
 
     // Validate profile URLs
@@ -43,9 +41,7 @@ export function validateTypeConstraints(
 
   // Warnings for common issues
   if (newTypes.length > 1 && newTypes.every((t) => t.profile && t.profile.length > 0)) {
-    warnings.push(
-      'Multiple types with profiles may make the element harder to implement',
-    );
+    warnings.push('Multiple types with profiles may make the element harder to implement');
   }
 
   return {
@@ -58,10 +54,7 @@ export function validateTypeConstraints(
 /**
  * Check if type restriction is valid
  */
-function isValidTypeRestriction(
-  typeCode: string,
-  baseTypes: TypeConstraint[],
-): boolean {
+function isValidTypeRestriction(typeCode: string, baseTypes: TypeConstraint[]): boolean {
   // Check if type code is allowed in base
   const baseTypeCodes = baseTypes.map((t) => t.code);
 
@@ -96,9 +89,7 @@ function getBaseAllowedTypes(element: ElementNode): TypeConstraint[] {
 /**
  * Get recommended type constraints based on common patterns
  */
-export function getRecommendedTypeConstraints(
-  element: ElementNode,
-): TypeConstraint[] | null {
+export function getRecommendedTypeConstraints(element: ElementNode): TypeConstraint[] | null {
   const path = element.path.toLowerCase();
 
   // Recommend specific profiles for common patterns

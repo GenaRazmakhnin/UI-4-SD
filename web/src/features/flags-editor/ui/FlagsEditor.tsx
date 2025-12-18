@@ -1,6 +1,6 @@
-import { Stack, Checkbox, Alert, Group, Anchor } from '@mantine/core';
-import { IconAlertCircle, IconExternalLink } from '@tabler/icons-react';
+import { Alert, Anchor, Checkbox, Group, Stack } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
+import { IconAlertCircle, IconExternalLink } from '@tabler/icons-react';
 import { flagChanged } from '../model';
 import styles from './FlagsEditor.module.css';
 
@@ -56,14 +56,9 @@ export function FlagsEditor({ element }: FlagsEditorProps) {
         />
 
         {element.mustSupport && element.min === 0 && (
-          <Alert
-            icon={<IconAlertCircle size={16} />}
-            color="blue"
-            variant="light"
-            mt="xs"
-          >
-            MustSupport with min=0 means: systems must be capable of populating
-            this element, but it's not required in every instance.
+          <Alert icon={<IconAlertCircle size={16} />} color="blue" variant="light" mt="xs">
+            MustSupport with min=0 means: systems must be capable of populating this element, but
+            it's not required in every instance.
           </Alert>
         )}
       </div>
@@ -89,15 +84,9 @@ export function FlagsEditor({ element }: FlagsEditorProps) {
         />
 
         {element.isModifier && (
-          <Alert
-            icon={<IconAlertCircle size={16} />}
-            color="red"
-            variant="light"
-            mt="xs"
-          >
-            <strong>Warning:</strong> Setting isModifier changes the semantics
-            of the resource. Only use for elements that truly modify the meaning
-            (e.g., negation, status).
+          <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" mt="xs">
+            <strong>Warning:</strong> Setting isModifier changes the semantics of the resource. Only
+            use for elements that truly modify the meaning (e.g., negation, status).
           </Alert>
         )}
       </div>
@@ -108,11 +97,7 @@ export function FlagsEditor({ element }: FlagsEditorProps) {
           label={
             <Group gap="xs">
               <span>Is Summary</span>
-              <Anchor
-                href="https://www.hl7.org/fhir/search.html#summary"
-                target="_blank"
-                size="xs"
-              >
+              <Anchor href="https://www.hl7.org/fhir/search.html#summary" target="_blank" size="xs">
                 <IconExternalLink size={14} />
               </Anchor>
             </Group>
@@ -125,9 +110,8 @@ export function FlagsEditor({ element }: FlagsEditorProps) {
 
       {/* Help Text */}
       <Alert color="gray" variant="light" icon={<IconAlertCircle size={16} />}>
-        <strong>Tip:</strong> Use Must Support for elements critical to your use
-        case. Is Modifier should only be set on elements that change the
-        resource's meaning.
+        <strong>Tip:</strong> Use Must Support for elements critical to your use case. Is Modifier
+        should only be set on elements that change the resource's meaning.
       </Alert>
     </Stack>
   );

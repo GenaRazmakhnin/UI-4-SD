@@ -1,19 +1,19 @@
 import {
-  Modal,
-  TextInput,
-  Stack,
+  Badge,
   Button,
   Group,
-  Text,
-  ScrollArea,
-  Badge,
   Loader,
+  Modal,
+  ScrollArea,
+  Stack,
+  Text,
+  TextInput,
 } from '@mantine/core';
-import { IconSearch } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
-import { useUnit } from 'effector-react';
-import { searchProfilesFx, $searchResults, $searchLoading } from '../model';
 import type { Profile } from '@shared/types';
+import { IconSearch } from '@tabler/icons-react';
+import { useUnit } from 'effector-react';
+import { useEffect, useState } from 'react';
+import { $searchLoading, $searchResults, searchProfilesFx } from '../model';
 import styles from './ProfileSearchModal.module.css';
 
 interface ProfileSearchModalProps {

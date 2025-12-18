@@ -8,10 +8,7 @@ export const persistence = {
    */
   saveProfiles(profiles: Profile[]): void {
     try {
-      localStorage.setItem(
-        `${STORAGE_KEY_PREFIX}:profiles`,
-        JSON.stringify(profiles),
-      );
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}:profiles`, JSON.stringify(profiles));
     } catch (error) {
       console.error('[Mock Persistence] Failed to save profiles:', error);
     }
@@ -34,9 +31,7 @@ export const persistence = {
    * Clear all mock data
    */
   clear(): void {
-    const keys = Object.keys(localStorage).filter((key) =>
-      key.startsWith(STORAGE_KEY_PREFIX),
-    );
+    const keys = Object.keys(localStorage).filter((key) => key.startsWith(STORAGE_KEY_PREFIX));
     for (const key of keys) {
       localStorage.removeItem(key);
     }
@@ -47,10 +42,7 @@ export const persistence = {
    */
   saveUndoStack(profileId: string, stack: unknown[]): void {
     try {
-      localStorage.setItem(
-        `${STORAGE_KEY_PREFIX}:undo:${profileId}`,
-        JSON.stringify(stack),
-      );
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}:undo:${profileId}`, JSON.stringify(stack));
     } catch (error) {
       console.error('[Mock Persistence] Failed to save undo stack:', error);
     }
@@ -58,9 +50,7 @@ export const persistence = {
 
   loadUndoStack(profileId: string): unknown[] {
     try {
-      const data = localStorage.getItem(
-        `${STORAGE_KEY_PREFIX}:undo:${profileId}`,
-      );
+      const data = localStorage.getItem(`${STORAGE_KEY_PREFIX}:undo:${profileId}`);
       return data ? JSON.parse(data) : [];
     } catch (error) {
       console.error('[Mock Persistence] Failed to load undo stack:', error);

@@ -1,13 +1,14 @@
 import { Paper, Tabs } from '@mantine/core';
-import { useUnit } from 'effector-react';
 import { $selectedElement } from '@widgets/element-tree';
-import { ElementHeader } from './ElementHeader';
-import { ConstraintsTab } from './ConstraintsTab';
+import { useUnit } from 'effector-react';
 import { BindingTab } from './BindingTab';
-import { SlicingTab } from './SlicingTab';
-import { MetadataTab } from './MetadataTab';
+import { ConstraintsTab } from './ConstraintsTab';
+import { ElementHeader } from './ElementHeader';
 import { EmptyState } from './EmptyState';
+import { ExtensionsTab } from './ExtensionsTab';
 import styles from './InspectorPanel.module.css';
+import { MetadataTab } from './MetadataTab';
+import { SlicingTab } from './SlicingTab';
 
 export function InspectorPanel() {
   const selectedElement = useUnit($selectedElement);
@@ -34,10 +35,8 @@ export function InspectorPanel() {
         <Tabs.List>
           <Tabs.Tab value="constraints">Constraints</Tabs.Tab>
           <Tabs.Tab value="binding">Binding</Tabs.Tab>
-          <Tabs.Tab
-            value="slicing"
-            disabled={!canSlice(selectedElement)}
-          >
+          <Tabs.Tab value="extensions">Extensions</Tabs.Tab>
+          <Tabs.Tab value="slicing" disabled={!canSlice(selectedElement)}>
             Slicing
           </Tabs.Tab>
           <Tabs.Tab value="metadata">Metadata</Tabs.Tab>
@@ -49,6 +48,10 @@ export function InspectorPanel() {
 
         <Tabs.Panel value="binding" className={styles.scrollablePanel}>
           <BindingTab element={selectedElement} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="extensions" className={styles.scrollablePanel}>
+          <ExtensionsTab element={selectedElement} />
         </Tabs.Panel>
 
         <Tabs.Panel value="slicing" className={styles.scrollablePanel}>

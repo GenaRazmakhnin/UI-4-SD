@@ -1,10 +1,7 @@
 /**
  * FHIR primitive and complex types with their inheritance
  */
-export const FHIR_TYPE_HIERARCHY: Record<
-  string,
-  { parent?: string; isPrimitive: boolean }
-> = {
+export const FHIR_TYPE_HIERARCHY: Record<string, { parent?: string; isPrimitive: boolean }> = {
   // Primitive types
   boolean: { isPrimitive: true },
   integer: { parent: 'decimal', isPrimitive: true },

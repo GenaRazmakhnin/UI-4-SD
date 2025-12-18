@@ -2,7 +2,7 @@ export class MockApiError extends Error {
   constructor(
     message: string,
     public statusCode: number,
-    public details?: unknown,
+    public details?: unknown
   ) {
     super(message);
     this.name = 'MockApiError';

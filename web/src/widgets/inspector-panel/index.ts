@@ -1,12 +1,12 @@
-export { InspectorPanel } from './ui/InspectorPanel';
+export {
+  getElementValidation,
+  getHighestSeverity,
+  groupMessagesBySeverity,
+} from './lib/validation';
 export {
   $activeTab,
   $panelWidth,
-  tabChanged,
   panelWidthChanged,
+  tabChanged,
 } from './model';
-export {
-  getElementValidation,
-  groupMessagesBySeverity,
-  getHighestSeverity,
-} from './lib/validation';
+export { InspectorPanel } from './ui/InspectorPanel';

@@ -1,0 +1,10 @@
+.conceptRow {
+  padding: var(--mantine-spacing-xs);
+  background: var(--mantine-color-gray-0);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.system {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 10px;
+}

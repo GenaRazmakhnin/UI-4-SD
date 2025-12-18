@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@shared/api';
-import type { Profile, ElementNode } from '@shared/types';
+import type { ElementNode, Profile } from '@shared/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /**
  * Query keys for profile data

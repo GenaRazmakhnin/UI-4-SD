@@ -1,18 +1,6 @@
-import {
-  Group,
-  Stack,
-  Text,
-  Badge,
-  ActionIcon,
-  Tooltip,
-  CopyButton,
-} from '@mantine/core';
-import {
-  IconCopy,
-  IconExternalLink,
-  IconAlertCircle,
-} from '@tabler/icons-react';
+import { ActionIcon, Badge, CopyButton, Group, Stack, Text, Tooltip } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
+import { IconAlertCircle, IconCopy, IconExternalLink } from '@tabler/icons-react';
 import styles from './ElementHeader.module.css';
 
 interface ElementHeaderProps {

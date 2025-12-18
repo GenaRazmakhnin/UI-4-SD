@@ -1,10 +1,7 @@
 /**
  * Simulates network delay with random jitter
  */
-export async function simulateDelay(
-  minMs: number,
-  maxMs: number,
-): Promise<void> {
+export async function simulateDelay(minMs: number, maxMs: number): Promise<void> {
   const delay = Math.floor(Math.random() * (maxMs - minMs) + minMs);
   await new Promise((resolve) => setTimeout(resolve, delay));
 }
@@ -19,11 +16,7 @@ export function simulateError(probability: number): boolean {
 /**
  * Logs mock API calls in development mode
  */
-export function logMockCall(
-  method: string,
-  endpoint: string,
-  data?: unknown,
-): void {
+export function logMockCall(method: string, endpoint: string, data?: unknown): void {
   if (import.meta.env.DEV) {
     console.log(`[Mock API] ${method} ${endpoint}`, data || '');
   }

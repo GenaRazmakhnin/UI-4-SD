@@ -1,5 +1,5 @@
-import { createStore, createEvent, sample } from 'effector';
 import { $selectedElement } from '@widgets/element-tree';
+import { createEvent, createStore, sample } from 'effector';
 
 /**
  * Active tab in inspector panel

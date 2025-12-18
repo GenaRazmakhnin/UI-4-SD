@@ -11,7 +11,7 @@ export function validateCardinality(
   min: number,
   max: string,
   baseMin: number,
-  baseMax: string,
+  baseMax: string
 ): CardinalityValidation {
   const errors: CardinalityValidation = { isValid: true };
 
@@ -65,7 +65,7 @@ export function getImpactMessage(
   min: number,
   max: string,
   baseMin: number,
-  baseMax: string,
+  baseMax: string
 ): string | null {
   // Required → Optional
   if (baseMin >= 1 && min === 0) {
@@ -88,10 +88,7 @@ export function getImpactMessage(
   }
 
   // Tightened range
-  if (
-    min > baseMin ||
-    (max !== '*' && baseMax !== '*' && Number(max) < Number(baseMax))
-  ) {
+  if (min > baseMin || (max !== '*' && baseMax !== '*' && Number(max) < Number(baseMax))) {
     return `🎯 Constraint tightened from ${baseMin}..${baseMax} to ${min}..${max}`;
   }
 

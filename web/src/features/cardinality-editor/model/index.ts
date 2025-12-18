@@ -1,8 +1,8 @@
-import { createStore, createEvent, createEffect, sample } from 'effector';
-import { $selectedElement } from '@widgets/element-tree';
 import { api } from '@shared/api';
-import { validateCardinality } from '../lib/validation';
 import type { ElementNode } from '@shared/types';
+import { $selectedElement } from '@widgets/element-tree';
+import { createEffect, createEvent, createStore, sample } from 'effector';
+import { validateCardinality } from '../lib/validation';
 
 // Events
 export const cardinalityChanged = createEvent<{
@@ -39,7 +39,7 @@ const applyCardinalityFx = createEffect(
       min,
       max,
     });
-  },
+  }
 );
 
 // Logic
@@ -54,23 +54,21 @@ sample({
     max,
     element,
   }),
-  target: createEffect(
-    async ({ profileId, elementPath, min, max, element }) => {
-      // Validate first
-      const validation = validateCardinality(min, max, element.min, element.max);
+  target: createEffect(async ({ profileId, elementPath, min, max, element }) => {
+    // Validate first
+    const validation = validateCardinality(min, max, element.min, element.max);
 
-      if (validation.isValid) {
-        await applyCardinalityFx({
-          profileId,
-          elementPath,
-          min,
-          max,
-        });
-      } else {
-        throw new Error('Validation failed');
-      }
-    },
-  ),
+    if (validation.isValid) {
+      await applyCardinalityFx({
+        profileId,
+        elementPath,
+        min,
+        max,
+      });
+    } else {
+      throw new Error('Validation failed');
+    }
+  }),
 });
 
 // Update editing state

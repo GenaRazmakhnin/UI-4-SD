@@ -1,13 +1,13 @@
-export { CardinalityEditor } from './ui/CardinalityEditor';
+export type { CardinalityValidation } from './lib/validation';
 export {
-  cardinalityChanged,
-  cardinalityEditCancelled,
-  $isEditingCardinality,
-  $cardinalityValidation,
-} from './model';
-export {
-  validateCardinality,
   getImpactMessage,
   parseMaxToNumber,
+  validateCardinality,
 } from './lib/validation';
-export type { CardinalityValidation } from './lib/validation';
+export {
+  $cardinalityValidation,
+  $isEditingCardinality,
+  cardinalityChanged,
+  cardinalityEditCancelled,
+} from './model';
+export { CardinalityEditor } from './ui/CardinalityEditor';

@@ -1,21 +1,9 @@
-import {
-  Stack,
-  Checkbox,
-  Group,
-  Button,
-  Alert,
-  Text,
-  Badge,
-} from '@mantine/core';
-import { IconSearch, IconX, IconAlertCircle } from '@tabler/icons-react';
-import { useState } from 'react';
+import { Alert, Badge, Button, Checkbox, Group, Stack, Text } from '@mantine/core';
 import type { ElementNode, TypeConstraint } from '@shared/types';
+import { IconAlertCircle, IconSearch, IconX } from '@tabler/icons-react';
+import { useState } from 'react';
+import { targetProfileAdded, targetProfileRemoved, typeConstraintChanged } from '../model';
 import { ProfileSearchModal } from './ProfileSearchModal';
-import {
-  typeConstraintChanged,
-  targetProfileAdded,
-  targetProfileRemoved,
-} from '../model';
 import styles from './TypeConstraintEditor.module.css';
 
 interface TypeConstraintEditorProps {
@@ -86,8 +74,7 @@ export function TypeConstraintEditor({ element }: TypeConstraintEditorProps) {
       {/* Base Types Info */}
       <Alert color="blue" variant="light" icon={<IconAlertCircle size={16} />}>
         <Text size="xs">
-          <strong>Base allowed types:</strong>{' '}
-          {baseTypes.map((t) => t.code).join(', ')}
+          <strong>Base allowed types:</strong> {baseTypes.map((t) => t.code).join(', ')}
         </Text>
       </Alert>
 
@@ -101,8 +88,7 @@ export function TypeConstraintEditor({ element }: TypeConstraintEditorProps) {
           {baseTypes.map((baseType) => {
             const isSelected = currentTypes.some((t) => t.code === baseType.code);
             const selectedType = currentTypes.find((t) => t.code === baseType.code);
-            const hasProfiles =
-              selectedType?.profile && selectedType.profile.length > 0;
+            const hasProfiles = selectedType?.profile && selectedType.profile.length > 0;
 
             return (
               <div key={baseType.code} className={styles.typeRow}>
@@ -119,9 +105,7 @@ export function TypeConstraintEditor({ element }: TypeConstraintEditorProps) {
                     </Group>
                   }
                   checked={isSelected}
-                  onChange={(e) =>
-                    handleTypeToggle(baseType.code, e.currentTarget.checked)
-                  }
+                  onChange={(e) => handleTypeToggle(baseType.code, e.currentTarget.checked)}
                   disabled={currentTypes.length === 1 && isSelected}
                 />
 
@@ -130,11 +114,7 @@ export function TypeConstraintEditor({ element }: TypeConstraintEditorProps) {
                   <Stack gap="xs" ml="xl" mt="xs">
                     {/* Existing Profiles */}
                     {selectedType?.profile?.map((profileUrl, idx) => (
-                      <Group
-                        key={idx}
-                        justify="space-between"
-                        className={styles.profileRow}
-                      >
+                      <Group key={idx} justify="space-between" className={styles.profileRow}>
                         <Text size="xs" className={styles.profileUrl}>
                           {profileUrl}
                         </Text>
@@ -142,9 +122,7 @@ export function TypeConstraintEditor({ element }: TypeConstraintEditorProps) {
                           size="xs"
                           variant="subtle"
                           color="red"
-                          onClick={() =>
-                            handleRemoveProfile(baseType.code, profileUrl)
-                          }
+                          onClick={() => handleRemoveProfile(baseType.code, profileUrl)}
                         >
                           <IconX size={14} />
                         </Button>
@@ -171,17 +149,15 @@ export function TypeConstraintEditor({ element }: TypeConstraintEditorProps) {
       {/* Warnings */}
       {currentTypes.length === 1 && (
         <Alert color="yellow" variant="light" icon={<IconAlertCircle size={16} />}>
-          Only one type allowed. You cannot remove the last type from an
-          element.
+          Only one type allowed. You cannot remove the last type from an element.
         </Alert>
       )}
 
       {currentTypes.length < baseTypes.length && (
         <Alert color="blue" variant="light">
           <Text size="xs">
-            <strong>Note:</strong> You've constrained the allowed types from the
-            base definition. This is a valid constraint that narrows down the
-            possibilities.
+            <strong>Note:</strong> You've constrained the allowed types from the base definition.
+            This is a valid constraint that narrows down the possibilities.
           </Text>
         </Alert>
       )}

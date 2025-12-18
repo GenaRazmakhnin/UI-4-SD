@@ -1,0 +1,223 @@
+.panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--mantine-color-white);
+}
+
+.panelFullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  background: var(--mantine-color-gray-0);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-weight: 600;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-7);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+}
+
+.tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabsRoot {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabsList {
+  padding: 0 var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  background: var(--mantine-color-white);
+  flex-shrink: 0;
+}
+
+.tabsPanel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+  background: var(--mantine-color-gray-0);
+  flex-shrink: 0;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+}
+
+.searchInput {
+  width: 200px;
+}
+
+.editorContainer {
+  flex: 1;
+  overflow: hidden;
+}
+
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+}
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--mantine-spacing-xl);
+  text-align: center;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--mantine-spacing-xl);
+  text-align: center;
+  color: var(--mantine-color-gray-5);
+}
+
+/* Diff styles */
+.diffContainer {
+  flex: 1;
+  overflow: auto;
+}
+
+.diffLine {
+  display: flex;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.5;
+}
+
+.diffLineNumber {
+  width: 50px;
+  padding: 0 var(--mantine-spacing-xs);
+  text-align: right;
+  color: var(--mantine-color-gray-5);
+  background: var(--mantine-color-gray-1);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.diffLineContent {
+  flex: 1;
+  padding: 0 var(--mantine-spacing-sm);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diffLineAdded {
+  background: var(--mantine-color-green-1);
+}
+
+.diffLineAdded .diffLineNumber {
+  background: var(--mantine-color-green-2);
+  color: var(--mantine-color-green-8);
+}
+
+.diffLineRemoved {
+  background: var(--mantine-color-red-1);
+}
+
+.diffLineRemoved .diffLineNumber {
+  background: var(--mantine-color-red-2);
+  color: var(--mantine-color-red-8);
+}
+
+.diffLineModified {
+  background: var(--mantine-color-yellow-1);
+}
+
+.diffLineModified .diffLineNumber {
+  background: var(--mantine-color-yellow-2);
+  color: var(--mantine-color-yellow-8);
+}
+
+/* Side by side diff */
+.sideBySideDiff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100%;
+}
+
+.diffPane {
+  overflow: auto;
+  border-right: 1px solid var(--mantine-color-gray-3);
+}
+
+.diffPane:last-child {
+  border-right: none;
+}
+
+.diffPaneHeader {
+  position: sticky;
+  top: 0;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  background: var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  font-weight: 600;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-6);
+  z-index: 1;
+}
+
+/* Monaco editor overrides */
+.monacoWrapper {
+  height: 100%;
+}
+
+.monacoWrapper :global(.monaco-editor) {
+  padding-top: var(--mantine-spacing-xs);
+}

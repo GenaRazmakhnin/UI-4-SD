@@ -5,11 +5,10 @@ import type { ElementNode, ValidationMessage } from '@shared/types';
  */
 export function getElementValidation(
   element: ElementNode,
-  allMessages: ValidationMessage[],
+  allMessages: ValidationMessage[]
 ): ValidationMessage[] {
   return allMessages.filter(
-    (msg) =>
-      msg.path === element.path || msg.path.startsWith(`${element.path}.`),
+    (msg) => msg.path === element.path || msg.path.startsWith(`${element.path}.`)
   );
 }
 
@@ -28,7 +27,7 @@ export function groupMessagesBySeverity(messages: ValidationMessage[]) {
  * Get highest severity for an element
  */
 export function getHighestSeverity(
-  messages: ValidationMessage[],
+  messages: ValidationMessage[]
 ): 'error' | 'warning' | 'info' | null {
   if (messages.some((m) => m.severity === 'error')) return 'error';
   if (messages.some((m) => m.severity === 'warning')) return 'warning';

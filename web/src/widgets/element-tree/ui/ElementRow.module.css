@@ -60,7 +60,7 @@
 
 .path {
   flex: 1;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
