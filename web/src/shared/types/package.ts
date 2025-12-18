@@ -22,6 +22,7 @@ export interface Package {
 }
 
 export interface PackageDependency {
+  packageId?: string;
   name: string;
   version: string;
   isInstalled?: boolean;

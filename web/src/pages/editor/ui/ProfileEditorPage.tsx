@@ -23,6 +23,7 @@ import { PreviewPanel } from '@widgets/preview-panel';
 import { useUnit } from 'effector-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import { useProfileResourceGuard } from '@shared/routing/guards';
 import { useUnsavedChangesWarning } from '../lib';
 import {
   $hasUnsavedChanges,
@@ -37,7 +38,10 @@ import styles from './ProfileEditorPage.module.css';
 type BottomTab = 'preview' | 'diagnostics';
 
 export function ProfileEditorPage() {
-  const { profileId } = useParams({ from: '/editor/$profileId' });
+  const { projectId, profileId } = useParams({
+    from: '/projects/$projectId/profiles/$profileId',
+  });
+  const { resource } = useProfileResourceGuard({ projectId, profileId });
   const selectedElement = useUnit($selectedElement);
   const [bottomTab, setBottomTab] = useState<BottomTab>('preview');
 
@@ -101,8 +105,9 @@ export function ProfileEditorPage() {
     ],
   ]);
 
-  const profileName = `Profile: ${profileId}`;
-  const profileType = 'Patient';
+  const profileName = resource?.name ?? `Profile: ${profileId}`;
+  const profileType = resource?.resourceType ?? 'StructureDefinition';
+  const resourceKind = resource?.resourceKind ?? 'profile';
 
   return (
     <UndoRedoProvider>
@@ -111,6 +116,7 @@ export function ProfileEditorPage() {
         <EditorToolbar
           profileName={profileName}
           profileType={profileType}
+          resourceKind={resourceKind}
           saveStatus={saveStatus}
           hasUnsavedChanges={hasUnsavedChanges}
           isValidating={isValidating}

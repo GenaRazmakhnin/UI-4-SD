@@ -1,4 +1,4 @@
-import { $currentProject } from '@entities/project';
+import { $currentProject, useRestoreLastProject } from '@entities/project';
 import { AppShell } from '@mantine/core';
 import { ENV } from '@shared/config';
 import { Outlet } from '@tanstack/react-router';
@@ -9,6 +9,7 @@ import { TopNavigation } from './TopNavigation';
 
 export function RootLayout() {
   const currentProject = useUnit($currentProject);
+  useRestoreLastProject();
 
   return (
     <>

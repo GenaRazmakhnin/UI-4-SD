@@ -73,6 +73,9 @@ Emit events for UI updates:
 pub struct EngineConfig {
     pub fhir_version: FhirVersion,
     pub package_cache_dir: PathBuf,
+    /// Root folder for server-managed project storage.
+    /// Projects are stored as: <workspace_dir>/<project_id>/(IR|SD|FSH)/...
+    pub workspace_dir: PathBuf,
     pub validation_level: ValidationLevel,
     pub terminology_service_url: Option<String>,
     pub max_history_depth: usize,

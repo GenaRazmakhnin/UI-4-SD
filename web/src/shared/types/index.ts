@@ -34,6 +34,9 @@ export type {
   SlicingRules,
   TypeConstraint,
 } from './profile';
+export type { ProjectTreeNode, ProjectTreeRoot, ProjectResourceKind } from './file-tree';
+export type { CreateProjectInput, Project } from './project';
+export type { ProjectResourceMetadata } from './resource';
 
 // Search types
 export type { SearchFilters, SearchResult } from './search';

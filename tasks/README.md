@@ -14,7 +14,7 @@ Core Rust backend implementation for profile building engine, API, and FHIR tool
 ### UI Tasks (`ui/`)
 React frontend implementation with Feature-Sliced Design architecture.
 
-**Total**: 20 tasks
+**Total**: 23 tasks
 
 ## How to Use These Tasks
 
@@ -89,8 +89,11 @@ Each task includes:
 | 18 | Project Templates UI | 🟡 High | Medium (1w) | ⬜ Not Started |
 | 19 | Profile Editor Page | 🔴 Critical | Medium (1w) | ⬜ Not Started |
 | 20 | Testing Infrastructure | 🔴 Critical | Medium (1w) | ⬜ Not Started |
+| 21 | Project List & Switcher UI | 🟡 High | Medium (1w) | ⬜ Not Started |
+| 22 | Project File Tree UI | 🟡 High | High (1-2w) | ⬜ Not Started |
+| 23 | Profile Editor Gating | 🟡 High | Low (2-3d) | ⬜ Not Started |
 
-**UI Total Estimated Time**: ~25-35 weeks
+**UI Total Estimated Time**: ~27-38 weeks
 
 ## Implementation Phases
 

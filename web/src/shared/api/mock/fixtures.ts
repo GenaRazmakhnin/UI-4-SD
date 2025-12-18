@@ -3,6 +3,13 @@ import type {
   Extension,
   Package,
   Profile,
+  Project,
+  CreateArtifactInput,
+  CreatedArtifact,
+  ProjectResourceKind,
+  ProjectResourceMetadata,
+  ProjectTreeNode,
+  ProjectTreeRoot,
   ValidationResult,
   ValueSet,
   ValueSetExpansion,
@@ -1699,6 +1706,480 @@ Description: "Defines constraints and extensions on the Patient resource..."
 * gender 1..1 MS
 `.trim(),
 };
+
+// Project file tree fixtures
+function makeFileNode(params: {
+  root: ProjectTreeRoot;
+  path: string;
+  name: string;
+  resourceId?: string;
+  resourceType?: string;
+  resourceKind?: ProjectResourceKind;
+  canonicalUrl?: string;
+}): ProjectTreeNode {
+  return {
+    path: params.path,
+    name: params.name,
+    kind: 'file',
+    root: params.root,
+    resourceId: params.resourceId,
+    resourceType: params.resourceType,
+    resourceKind: params.resourceKind,
+    canonicalUrl: params.canonicalUrl,
+    children: [],
+  };
+}
+
+function makeFolder(
+  root: ProjectTreeRoot,
+  path: string,
+  name: string,
+  children: ProjectTreeNode[]
+): ProjectTreeNode {
+  return { path, name, root, kind: 'folder', children };
+}
+
+function generateProfileFolder(params: {
+  root: ProjectTreeRoot;
+  folderPath: string;
+  folderName: string;
+  count: number;
+  prefix: string;
+}): ProjectTreeNode {
+  const children: ProjectTreeNode[] = Array.from({ length: params.count }).map((_, index) => {
+    const suffix = (index + 1).toString().padStart(3, '0');
+    const resourceId = `${params.prefix}-${suffix}`;
+
+    return makeFileNode({
+      root: params.root,
+      path: `${params.folderPath}/${resourceId}.json`,
+      name: `${resourceId}.json`,
+      resourceId,
+      resourceType: 'StructureDefinition',
+      resourceKind: 'profile',
+      canonicalUrl: `http://example.org/${params.prefix}/${resourceId}`,
+    });
+  });
+
+  return makeFolder(params.root, params.folderPath, params.folderName, children);
+}
+
+function createBaseProjectTree(projectId: string): ProjectTreeNode[] {
+  const irRoot = makeFolder('IR', 'IR', 'IR', [
+    makeFolder('IR', 'IR/input', 'input', [
+      makeFileNode({
+        root: 'IR',
+        path: 'IR/input/implementation-guide.json',
+        name: 'implementation-guide.json',
+        resourceId: `${projectId}-ig`,
+        resourceType: 'ImplementationGuide',
+        resourceKind: 'instance',
+        canonicalUrl: `http://example.org/${projectId}/ImplementationGuide`,
+      }),
+      makeFileNode({
+        root: 'IR',
+        path: 'IR/input/examples-manifest.json',
+        name: 'examples-manifest.json',
+        resourceKind: 'other',
+      }),
+    ]),
+    makeFolder('IR', 'IR/examples', 'examples', [
+      makeFileNode({
+        root: 'IR',
+        path: 'IR/examples/patient-bundle.json',
+        name: 'patient-bundle.json',
+        resourceId: 'patient-bundle',
+        resourceType: 'Bundle',
+        resourceKind: 'instance',
+      }),
+      makeFileNode({
+        root: 'IR',
+        path: 'IR/examples/device-alert.json',
+        name: 'device-alert.json',
+        resourceId: 'device-alert',
+        resourceType: 'Communication',
+        resourceKind: 'instance',
+      }),
+    ]),
+  ]);
+
+  const sdRoot = makeFolder('SD', 'SD', 'SD', [
+    makeFolder('SD', 'SD/profiles', 'profiles', [
+      makeFileNode({
+        root: 'SD',
+        path: 'SD/profiles/patient-profile.json',
+        name: 'patient-profile.json',
+        resourceId: 'patient-profile',
+        resourceType: 'StructureDefinition',
+        resourceKind: 'profile',
+        canonicalUrl: `http://example.org/${projectId}/StructureDefinition/patient-profile`,
+      }),
+      makeFileNode({
+        root: 'SD',
+        path: 'SD/profiles/observation-vitals.json',
+        name: 'observation-vitals.json',
+        resourceId: 'observation-vitals',
+        resourceType: 'StructureDefinition',
+        resourceKind: 'profile',
+        canonicalUrl: `http://example.org/${projectId}/StructureDefinition/observation-vitals`,
+      }),
+      makeFileNode({
+        root: 'SD',
+        path: 'SD/profiles/device-alert.json',
+        name: 'device-alert.json',
+        resourceId: 'device-alert-profile',
+        resourceType: 'StructureDefinition',
+        resourceKind: 'profile',
+        canonicalUrl: `http://example.org/${projectId}/StructureDefinition/device-alert`,
+      }),
+    ]),
+    makeFolder('SD', 'SD/extensions', 'extensions', [
+      makeFileNode({
+        root: 'SD',
+        path: 'SD/extensions/practitioner-role.json',
+        name: 'practitioner-role.json',
+        resourceId: 'practitioner-role-ext',
+        resourceType: 'StructureDefinition',
+        resourceKind: 'extension',
+        canonicalUrl: `http://example.org/${projectId}/StructureDefinition/practitioner-role`,
+      }),
+      makeFileNode({
+        root: 'SD',
+        path: 'SD/extensions/device-udi.json',
+        name: 'device-udi.json',
+        resourceId: 'device-udi-ext',
+        resourceType: 'StructureDefinition',
+        resourceKind: 'extension',
+        canonicalUrl: `http://example.org/${projectId}/StructureDefinition/device-udi`,
+      }),
+    ]),
+    makeFolder('SD', 'SD/value-sets', 'value-sets', [
+      makeFileNode({
+        root: 'SD',
+        path: 'SD/value-sets/vitals-locations.json',
+        name: 'vitals-locations.json',
+        resourceId: 'vitals-locations',
+        resourceType: 'ValueSet',
+        resourceKind: 'valueset',
+        canonicalUrl: `http://example.org/${projectId}/ValueSet/vitals-locations`,
+      }),
+      makeFileNode({
+        root: 'SD',
+        path: 'SD/value-sets/device-alert-codes.json',
+        name: 'device-alert-codes.json',
+        resourceId: 'device-alert-codes',
+        resourceType: 'CodeSystem',
+        resourceKind: 'codesystem',
+        canonicalUrl: `http://example.org/${projectId}/CodeSystem/device-alert-codes`,
+      }),
+    ]),
+  ]);
+
+  const fshRoot = makeFolder('FSH', 'FSH', 'FSH', [
+    makeFolder('FSH', 'FSH/profiles', 'profiles', [
+      makeFileNode({
+        root: 'FSH',
+        path: 'FSH/profiles/patient-profile.fsh',
+        name: 'patient-profile.fsh',
+        resourceKind: 'profile',
+      }),
+      makeFileNode({
+        root: 'FSH',
+        path: 'FSH/profiles/observation-vitals.fsh',
+        name: 'observation-vitals.fsh',
+        resourceKind: 'profile',
+      }),
+    ]),
+    makeFolder('FSH', 'FSH/examples', 'examples', [
+      makeFileNode({
+        root: 'FSH',
+        path: 'FSH/examples/patient-example.fsh',
+        name: 'patient-example.fsh',
+        resourceKind: 'example',
+      }),
+      makeFileNode({
+        root: 'FSH',
+        path: 'FSH/examples/device-alert-example.fsh',
+        name: 'device-alert-example.fsh',
+        resourceKind: 'example',
+      }),
+    ]),
+  ]);
+
+  return [irRoot, sdRoot, fshRoot];
+}
+
+function createLargeProjectTree(projectId: string, profileCount = 520): ProjectTreeNode[] {
+  const base = createBaseProjectTree(projectId);
+  const sdRoot = base.find((node) => node.root === 'SD');
+
+  if (sdRoot) {
+    const clinicalFolder = generateProfileFolder({
+      root: 'SD',
+      folderPath: 'SD/profiles/clinical',
+      folderName: 'clinical',
+      count: profileCount,
+      prefix: `${projectId}-clinical-profile`,
+    });
+
+    sdRoot.children = [clinicalFolder, ...sdRoot.children];
+  }
+
+  return base;
+}
+
+export const mockProjectTrees: Record<string, ProjectTreeNode[]> = {
+  default: createBaseProjectTree('default'),
+  'clinical-quality-suite': createBaseProjectTree('clinical-quality-suite'),
+  'regional-care-ig': createBaseProjectTree('regional-care-ig'),
+  'device-data-pilot': createBaseProjectTree('device-data-pilot'),
+  'research-catalog': createLargeProjectTree('research-catalog'),
+};
+
+export function cloneProjectTree(tree: ProjectTreeNode[]): ProjectTreeNode[] {
+  return tree.map((node) => ({
+    ...node,
+    children: cloneProjectTree(node.children),
+  }));
+}
+
+export function findResourceNodeById(
+  nodes: ProjectTreeNode[],
+  resourceId: string
+): ProjectTreeNode | null {
+  for (const node of nodes) {
+    if (node.kind === 'file' && node.resourceId === resourceId) {
+      return node;
+    }
+    const child = findResourceNodeById(node.children, resourceId);
+    if (child) {
+      return child;
+    }
+  }
+  return null;
+}
+
+export function toResourceMetadata(
+  projectId: string,
+  node: ProjectTreeNode
+): ProjectResourceMetadata {
+  return {
+    projectId,
+    resourceId: node.resourceId ?? node.name,
+    resourceType: node.resourceType,
+    resourceKind: node.resourceKind ?? 'other',
+    path: node.path,
+    name: node.name,
+    canonicalUrl: node.canonicalUrl,
+    root: node.root,
+  };
+}
+
+const slugify = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+
+function ensureFolder(
+  nodes: ProjectTreeNode[],
+  root: ProjectTreeRoot,
+  path: string,
+  name: string
+): ProjectTreeNode {
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length === 0) throw new Error('Invalid folder path');
+
+  let current =
+    nodes.find((node) => node.path === parts[0]) ??
+    (() => {
+      const folder: ProjectTreeNode = {
+        path: parts[0],
+        name: parts[0],
+        root,
+        kind: 'folder',
+        children: [],
+      };
+      nodes.push(folder);
+      return folder;
+    })();
+
+  for (let i = 1; i < parts.length; i++) {
+    const nextPath = parts.slice(0, i + 1).join('/');
+    let child = current.children.find((node) => node.path === nextPath);
+    if (!child) {
+      child = {
+        path: nextPath,
+        name: i === parts.length - 1 ? name : parts[i],
+        root,
+        kind: 'folder',
+        children: [],
+      };
+      current.children.unshift(child);
+    }
+    current = child;
+  }
+
+  return current;
+}
+
+export function addMockArtifact(
+  projectId: string,
+  tree: ProjectTreeNode[],
+  input: CreateArtifactInput
+): CreatedArtifact {
+  const folderPath =
+    input.kind === 'valueset'
+      ? 'SD/value-sets'
+      : input.kind === 'extension'
+        ? 'SD/extensions'
+        : 'IR/input/profiles';
+
+  const root: ProjectTreeRoot = input.kind === 'profile' ? 'IR' : 'SD';
+  const folderName = folderPath.split('/').pop() || 'profiles';
+  const folder = ensureFolder(tree, root, folderPath, folderName);
+
+  const resourceId = input.id?.trim() || slugify(input.name || 'artifact');
+  const fileName = `${resourceId}.json`;
+  const resourceType = input.kind === 'valueset' ? 'ValueSet' : 'StructureDefinition';
+  const resourceKind: ProjectResourceKind =
+    input.kind === 'valueset'
+      ? 'valueset'
+      : input.kind === 'extension'
+        ? 'extension'
+        : 'profile';
+
+  const canonicalUrl = `http://example.org/${projectId}/${resourceType}/${resourceId}`;
+  const path = `${folderPath}/${fileName}`;
+
+  const node: ProjectTreeNode = {
+    path,
+    name: fileName,
+    root,
+    kind: 'file',
+    resourceId,
+    resourceType,
+    resourceKind,
+    canonicalUrl,
+    children: [],
+  };
+
+  folder.children.unshift(node);
+
+  return {
+    path,
+    resourceId,
+    resourceType,
+    resourceKind,
+    canonicalUrl,
+  };
+}
+
+// Mock Projects
+export const mockProjects: Project[] = [
+  {
+    id: 'clinical-quality-suite',
+    name: 'Clinical Quality Suite',
+    fhirVersion: '4.0.1',
+    templateId: 'implementation-guide',
+    description: 'Quality measures and profiles for chronic care coordination.',
+    packageId: 'org.example.cqs',
+    canonicalBase: 'http://example.org/fhir/cqs',
+    version: '1.3.0',
+    publisher: 'FHIR Builders',
+    path: '/workspace/cqs',
+    createdAt: '2024-09-12T08:00:00.000Z',
+    updatedAt: '2024-12-18T17:30:00.000Z',
+    lastOpenedAt: '2025-01-05T09:40:00.000Z',
+    dependencies: [
+      { packageId: 'hl7.fhir.r4.core', version: '4.0.1', name: 'FHIR R4 Core' },
+      { packageId: 'hl7.fhir.us.core', version: '6.1.0', name: 'US Core IG' },
+    ],
+  },
+  {
+    id: 'regional-care-ig',
+    name: 'Regional Care IG',
+    fhirVersion: '4.3.0',
+    templateId: 'regional',
+    description: 'Starter kit for regional implementation guides with IPS alignment.',
+    packageId: 'org.example.rcig',
+    canonicalBase: 'http://region.example.org/fhir',
+    version: '0.6.2',
+    publisher: 'Northwind Health',
+    path: '/workspace/regional-care',
+    createdAt: '2024-10-01T10:15:00.000Z',
+    updatedAt: '2024-12-20T15:05:00.000Z',
+    lastOpenedAt: '2025-01-03T13:05:00.000Z',
+    dependencies: [{ packageId: 'hl7.fhir.uv.ips', version: '1.1.0', name: 'IPS' }],
+  },
+  {
+    id: 'device-data-pilot',
+    name: 'Device Data Pilot',
+    fhirVersion: '5.0.0',
+    templateId: 'blank',
+    description: 'Lightweight pilot for ingesting device telemetry into FHIR.',
+    packageId: 'org.example.ddp',
+    canonicalBase: 'http://example.org/fhir/device',
+    version: '0.3.0',
+    publisher: 'Signal Labs',
+    path: '/workspace/device-data',
+    createdAt: '2024-11-12T09:12:00.000Z',
+    updatedAt: '2024-12-28T10:45:00.000Z',
+    lastOpenedAt: '2025-01-06T08:10:00.000Z',
+    dependencies: [{ packageId: 'hl7.fhir.uv.ipa', version: '1.0.0', name: 'IPA' }],
+  },
+  {
+    id: 'research-catalog',
+    name: 'Research Catalog',
+    fhirVersion: '4.0.1',
+    templateId: 'custom',
+    description: 'Research profile catalog with observation and questionnaire focus.',
+    packageId: 'org.example.research',
+    canonicalBase: 'http://example.org/fhir/research',
+    version: '0.9.0',
+    publisher: 'Open Health Labs',
+    path: '/workspace/research',
+    createdAt: '2024-08-06T11:00:00.000Z',
+    updatedAt: '2024-12-10T16:10:00.000Z',
+    lastOpenedAt: '2025-01-02T18:25:00.000Z',
+    dependencies: [{ packageId: 'hl7.fhir.uv.sdc', version: '3.0.0', name: 'SDC' }],
+  },
+];
+
+export const mockProjectsById: Record<string, Project> = Object.fromEntries(
+  mockProjects.map((project) => [project.id, project])
+);
+
+export function createMockProject(
+  overrides: Partial<Project> & Pick<Project, 'name' | 'fhirVersion'>
+): Project {
+  const slug = overrides.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const now = new Date().toISOString();
+
+  const project: Project = {
+    id: overrides.id ?? `${slug || 'project'}-${Math.random().toString(36).slice(2, 8)}`,
+    name: overrides.name,
+    fhirVersion: overrides.fhirVersion,
+    templateId: overrides.templateId ?? 'blank',
+    description:
+      overrides.description ?? 'Custom project created from the mock API while backend is offline.',
+    packageId: overrides.packageId,
+    canonicalBase: overrides.canonicalBase ?? `http://example.org/${slug || 'project'}`,
+    version: overrides.version ?? '0.1.0',
+    publisher: overrides.publisher ?? 'FHIR Profile Builder',
+    path: overrides.path ?? `/workspace/${slug || 'project'}`,
+    createdAt: overrides.createdAt ?? now,
+    updatedAt: overrides.updatedAt ?? now,
+    lastOpenedAt: overrides.lastOpenedAt ?? now,
+    dependencies: overrides.dependencies ?? [],
+  };
+
+  mockProjects.unshift(project);
+  mockProjectsById[project.id] = project;
+
+  return project;
+}
 
 // Mock undo/redo stacks
 export const mockUndoStack: Record<string, unknown[]> = {};

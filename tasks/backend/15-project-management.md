@@ -13,6 +13,9 @@ pub struct Project {
     pub canonical_base: String,
     pub fhir_version: FhirVersion,
     pub dependencies: Vec<PackageDependency>,
+    /// Absolute path to this project's root directory on disk.
+    /// Resolved as: <workspace_dir>/<project_id>/
+    pub root_dir: PathBuf,
     pub resources: HashMap<CanonicalUrl, ProjectResource>,
     pub config: ProjectConfig,
 }
@@ -27,29 +30,60 @@ pub struct ProjectResource {
 }
 ```
 
-### R2: Project File Format
-- Store project metadata in `sushi-config.yaml` (SUSHI-compatible)
-- Store IR cache in `.profile-builder/` directory
-- Store validation cache
-- Git-friendly format (text, deterministic)
+### R2: Workspace Storage Layout (Server-Managed)
+The backend must be started with a **workspace base directory** (passed as a CLI arg to the server). All project files live under that directory.
+
+**Workspace root (argument):**
+- `--workspace-dir /path/to/niten-data` (absolute or relative)
+
+**On-disk layout:**
+```
+<workspace_dir>/
+  <project_id>/
+    project.json
+    sushi-config.yaml                # optional, generated for export compatibility
+    IR/
+      index.json                     # resource index + metadata
+      resources/
+        <resource_id>.json           # serialized IR (UI editing source-of-truth)
+    SD/
+      StructureDefinition/
+        <name>.json                  # exported/round-tripped SD JSON
+      ValueSet/
+        <name>.json
+    FSH/
+      profiles/
+        <name>.fsh
+      extensions/
+        <name>.fsh
+      valuesets/
+        <name>.fsh
+```
+
+**Rules:**
+- All file reads/writes must be confined to `<workspace_dir>/<project_id>/` (no path traversal).
+- Writes are atomic (`write temp` → `fsync` → `rename`) to avoid corruption on crash.
+- `IR/` is the canonical editing store; `SD/` and `FSH/` are derived artifacts unless explicitly imported as source.
 
 ### R3: Project Operations
 **Create Project:**
-- Initialize from template or blank
-- Set up directory structure
-- Create sushi-config.yaml
-- Initialize Git repository (optional)
+- Allocate new `project_id`
+- Create directory structure under `<workspace_dir>/<project_id>/` (`IR/`, `SD/`, `FSH/`)
+- Create `project.json` with minimal metadata (name, fhirVersion, canonicalBase)
+- Optionally generate `sushi-config.yaml` for compatibility/export
+- Optionally initialize Git repository (optional, future)
 
 **Open Project:**
-- Load project from directory
-- Parse sushi-config.yaml
+- Load project by `project_id`
+- Read `project.json`
+- Read `IR/index.json` (if present)
 - Load dependencies
-- Load resources (lazy)
+- Load resources (lazy, per-resource IR file)
 
 **Save Project:**
-- Save modified resources
-- Update file timestamps
-- Export to configured formats
+- Persist modified IR documents into `IR/resources/`
+- Update `IR/index.json`
+- Optionally export updated resources into `SD/` and/or `FSH/`
 
 **Close Project:**
 - Confirm unsaved changes
@@ -58,10 +92,12 @@ pub struct ProjectResource {
 
 ### R4: Resource Management
 **Add Resource:**
-- Create new profile/extension/ValueSet/etc.
+- Create new profile / extension / ValueSet (and later: CodeSystem, Instance)
 - Assign canonical URL
 - Add to project
-- Create file
+- Create on-disk files inside project directory:
+  - Always create `IR/resources/<resource_id>.json`
+  - Optionally create initial `FSH/.../<name>.fsh` or `SD/.../<name>.json` based on requested `source.format`
 
 **Remove Resource:**
 - Check for dependents
@@ -70,10 +106,12 @@ pub struct ProjectResource {
 - Delete file
 
 **Import Resource:**
-- Import SD JSON or FSH
+- Import SD JSON or FSH into a project
 - Detect resource type
 - Add to project
-- Create file
+- Persist:
+  - `IR/resources/<resource_id>.json`
+  - Store the imported source under `SD/` or `FSH/` (matching import format) for round-trip workflows
 
 ### R5: Cross-Reference Resolution
 - Resolve canonical URLs within project
@@ -111,10 +149,19 @@ Support creating projects from templates:
 - Close project (not delete from disk)
 
 **POST `/api/projects/:id/resources`**
-- Add resource to project
+- Add resource to project (Profile / Extension / ValueSet)
+- Request body includes `kind`, `name`, optional `canonicalUrl`, optional `base`:
+  - Profile: base is a resource type (e.g. `"Patient"`) or canonical base URL
+  - Extension: base defaults to `http://hl7.org/fhir/StructureDefinition/Extension`
+  - ValueSet: base is not applicable
+- Response includes `resourceId`, `canonicalUrl`, `kind`, and file paths (`IR/`, optional `FSH/` or `SD/`)
 
 **DELETE `/api/projects/:id/resources/:canonical`**
 - Remove resource from project
+
+**GET `/api/projects/:id/tree`**
+- Return a virtual file tree rooted at `IR/`, `SD/`, `FSH/` for the UI project explorer
+- Include `resourceKind` classification so UI can decide whether to open the Profile Editor
 
 **GET `/api/projects/:id/dependencies`**
 - Get dependency graph

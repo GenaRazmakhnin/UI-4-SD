@@ -57,8 +57,6 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      'effector',
-      'effector-react',
       '@mantine/core',
       '@mantine/hooks',
     ],

@@ -11,12 +11,15 @@ import type {
   ValueSetExpansion,
 } from '@shared/types';
 import { apiClient } from '../client';
+import { projectsApi } from '../projects';
 
 /**
  * Real API implementation that connects to the backend
  * This will be implemented once the backend API is ready
  */
 export const realApi = {
+  projects: projectsApi,
+
   profiles: {
     async list(): Promise<Profile[]> {
       return apiClient.get<Profile[]>('/api/profiles');

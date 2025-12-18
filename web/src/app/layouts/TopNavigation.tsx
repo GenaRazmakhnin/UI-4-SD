@@ -1,118 +1,119 @@
-import type { Project } from '@entities/project';
-import { UndoRedoToolbar } from '@features/undo-redo';
+import type {Project} from '@entities/project';
+import {ProjectSwitcher} from '@features/project/switch-project';
 import {
-  ActionIcon,
-  Anchor,
-  Breadcrumbs,
-  Divider,
-  Group,
-  Menu,
-  Text,
-  Tooltip,
+    ActionIcon,
+    Anchor,
+    Button,
+    Divider,
+    Flex,
+    Group,
+    Menu,
+    NavLink,
+    Text,
+    Tooltip,
 } from '@mantine/core';
-import { navigation } from '@shared/lib/navigation';
+import {navigation} from '@shared/lib/navigation';
 import {
-  IconBrandGithub,
-  IconFileCode,
-  IconHelp,
-  IconPackage,
-  IconSettings,
+    IconBrandGithub,
+    IconFileCode,
+    IconHelp,
+    IconFolders,
+    IconHierarchy,
+    IconPackage,
 } from '@tabler/icons-react';
-import { Link } from '@tanstack/react-router';
+import {Link, useRouterState} from '@tanstack/react-router';
 import styles from './TopNavigation.module.css';
 
 interface TopNavigationProps {
-  project: Project | null;
+    project: Project | null;
 }
 
-export function TopNavigation({ project }: TopNavigationProps) {
-  return (
-    <div className={styles.container}>
-      {/* Left section - Logo & Breadcrumbs */}
-      <Group gap="md">
-        <Link to="/" className={styles.logo}>
-          <IconFileCode size={24} />
-          <Text size="lg" fw={600}>
-            FHIR Profile Builder
-          </Text>
-        </Link>
+export function TopNavigation({project}: TopNavigationProps) {
+    const {location} = useRouterState();
+    const pathname = location.pathname;
 
-        {project && (
-          <Breadcrumbs separator="›" className={styles.breadcrumbs}>
-            <Anchor component={Link} to="/" size="sm">
-              Projects
-            </Anchor>
-            <Text size="sm" fw={500}>
-              {project.name}
-            </Text>
-          </Breadcrumbs>
-        )}
-      </Group>
+    const navLinks = [
+        {label: 'Projects', to: '/projects', icon: <IconFolders size={16}/>},
+        {label: 'Packages', to: '/packages', icon: <IconPackage size={16}/>},
+        project
+            ? {
+                label: 'Files',
+                to: `/projects/${project.id}/tree`,
+                icon: <IconHierarchy size={16}/>,
+            }
+            : null,
+    ].filter(Boolean) as { label: string; to: string; icon: React.ReactNode }[];
 
-      {/* Right section - Actions */}
-      <Group gap="xs">
-        {/* Undo/Redo */}
-        <UndoRedoToolbar />
-        <Divider orientation="vertical" />
+    return (
+        <div className={styles.container}>
+            <Group gap="md">
+                <Link to="/projects" className={styles.logo}>
+          <span className={styles.logoMark} aria-hidden="true">
+            <img src="/logo.png" alt="" className={styles.logoImage}/>
+          </span>
+                    <Text size="lg" fw={600}>
+                        NITEN
+                    </Text>
+                </Link>
 
-        {/* Packages */}
-        <Tooltip label="FHIR Packages">
-          <ActionIcon
-            variant="subtle"
-            size="lg"
-            aria-label="Packages"
-            component={Link}
-            to="/packages"
-          >
-            <IconPackage size={20} />
-          </ActionIcon>
-        </Tooltip>
+                <Flex gap="md">
+                    {navLinks.map((link) => (
+                        <NavLink
+                            key={link.to}
+                            component={Link}
+                            to={link.to}
+                            leftSection={link.icon}
+                            variant="subtle"
+                            aria-current={
+                                pathname === link.to || pathname.startsWith(link.to) ? 'page' : undefined
+                            }
+                            className={styles.navButton}
+                            label={link.label}
+                        />
+                    ))}
+                </Flex>
+            </Group>
 
-        {/* Help Menu */}
-        <Menu position="bottom-end" width={220}>
-          <Menu.Target>
-            <ActionIcon variant="subtle" size="lg" aria-label="Help">
-              <IconHelp size={20} />
-            </ActionIcon>
-          </Menu.Target>
+            {/* Right section - Actions */}
+            <Group gap="xs">
+                <ProjectSwitcher/>
+                <Divider orientation="vertical"/>
 
-          <Menu.Dropdown>
-            <Menu.Label>Documentation</Menu.Label>
-            <Menu.Item
-              leftSection={<IconFileCode size={16} />}
-              component="a"
-              href="https://fhir-profile-builder.dev/docs"
-              target="_blank"
-            >
-              User Guide
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconBrandGithub size={16} />}
-              component="a"
-              href="https://github.com/your-org/fhir-profile-builder"
-              target="_blank"
-            >
-              GitHub
-            </Menu.Item>
+                {/* Help Menu */}
+                <Menu position="bottom-end" width={220}>
+                    <Menu.Target>
+                        <ActionIcon variant="subtle" size="lg" aria-label="Help">
+                            <IconHelp size={20}/>
+                        </ActionIcon>
+                    </Menu.Target>
 
-            <Menu.Divider />
+                    <Menu.Dropdown>
+                        <Menu.Label>Documentation</Menu.Label>
+                        <Menu.Item
+                            leftSection={<IconFileCode size={16}/>}
+                            component="a"
+                            href="https://fhir-profile-builder.dev/docs"
+                            target="_blank"
+                        >
+                            User Guide
+                        </Menu.Item>
+                        <Menu.Item
+                            leftSection={<IconBrandGithub size={16}/>}
+                            component="a"
+                            href="https://github.com/your-org/fhir-profile-builder"
+                            target="_blank"
+                        >
+                            GitHub
+                        </Menu.Item>
 
-            <Menu.Item component={Link} to="/about">
-              About
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
+                        <Menu.Divider/>
 
-        {/* Settings */}
-        <ActionIcon
-          variant="subtle"
-          size="lg"
-          aria-label="Settings"
-          onClick={() => navigation.toSettings()}
-        >
-          <IconSettings size={20} />
-        </ActionIcon>
-      </Group>
-    </div>
-  );
+                        <Menu.Item component={Link} to="/about">
+                            About
+                        </Menu.Item>
+                    </Menu.Dropdown>
+                </Menu>
+            </Group>
+        </div>
+    );
 }

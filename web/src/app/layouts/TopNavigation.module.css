@@ -17,10 +17,27 @@
   transition: opacity 150ms;
 }
 
-.logo:hover {
-  opacity: 0.8;
+.logoMark {
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.breadcrumbs {
-  color: var(--text-secondary);
+.logoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 25%;
+  transform: scale(1.35);
+  transform-origin: 50% 25%;
+  display: block;
+}
+
+.logo:hover {
+  opacity: 0.8;
 }

@@ -1,103 +1,150 @@
 # Task: Package Management System
 
 ## Description
-Implement FHIR package management using maki's CanonicalFacade for resolving base definitions, extensions, ValueSets, and other resources from loaded packages.
+
+Implement a thin API layer on top of `octofhir-canonical-manager` for FHIR package management. The canonical manager handles all storage, registry interaction, and SQLite-based search. Backend exposes REST endpoints with SSE for installation progress.
+
+## Architecture
+
+```
+Frontend (React)                    Backend (Axum)                  octofhir-canonical-manager
+    |                                    |                                    |
+    |-- GET /api/packages ---------->    |-- list_packages() ------------->  |
+    |-- GET /api/packages/search?q= -->  |-- search_registry() ---------->   |
+    |-- POST /api/packages/:id/install   |-- install_with_progress() ---->   |
+    |   (SSE stream)                     |   (DownloadProgress trait)        |
+    |-- GET /api/search/extensions -->   |-- search_resources() --------->   |
+```
 
 ## Requirements
 
-### R1: Package Storage Integration
-- Use maki's `CanonicalFacade` for package indexing
-- Leverage `~/.maki/packages/` cache directory
-- Support loading packages from cache
-- Index package resources by canonical URL
+### R1: Package List Endpoint
+- `GET /api/packages` - List installed packages
+- Returns package info from canonical manager's SQLite storage
+- Includes resource counts, FHIR version, installation date
 
-### R2: Package Registry Integration
-- Connect to `packages.fhir.org` registry
-- Search for packages by name/description
-- Retrieve package metadata (versions, dependencies)
-- Download packages from registry
+### R2: Package Installation with Progress (SSE)
+- `POST /api/packages/:id/install` - Install package with SSE progress
+- Stream real-time progress events to UI:
+  - `start` - Installation started
+  - `progress` - Download progress (bytes, percentage)
+  - `extracting` - Extracting package contents
+  - `indexing` - Indexing resources in SQLite
+  - `complete` - Installation successful
+  - `error` - Installation failed
+- Resolve transitive dependencies automatically
 
-### R3: Package Installation
-- Install package from registry by ID and version
-- Resolve and install transitive dependencies
-- Verify package integrity (checksums)
-- Store in cache directory
-- Index resources after installation
+### R3: Package Uninstall
+- `POST /api/packages/:id/uninstall` - Remove installed package
+- Clean up from canonical manager's storage
 
-### R4: Package Resolution
-- Resolve canonical URLs to resources
-- Search priority: project-local → loaded packages → core spec
-- Support version-specific resolution
-- Handle multiple versions of same package
+### R4: Registry Search
+- `GET /api/packages/search?q=` - Search packages.fhir.org registry
+- Returns available packages matching query
+- Shows latest version, FHIR compatibility
 
-### R5: Dependency Management
-- Parse `sushi-config.yaml` dependencies
-- Load all declared package dependencies
-- Detect and warn about missing dependencies
-- Detect circular dependencies
-- Validate version compatibility
+### R5: Resource Search
+- `GET /api/search/extensions?q=&package=` - Search extensions
+- `GET /api/search/valuesets?q=` - Search value sets
+- `GET /api/search/resources?q=&type=&package=` - Generic search
+- Leverages canonical manager's SQLite full-text search
+- Filter by resource type, package, text query
 
-### R6: Resource Search
-- Search resources across loaded packages
-- Filter by resource type (Profile, Extension, ValueSet, etc.)
-- Full-text search in resource names/descriptions
-- Filter by package
-- Fuzzy search for resource discovery
+### R6: Global Package Storage
+- Packages stored globally in `~/.maki/packages/`
+- Managed entirely by canonical manager
+- No custom storage implementation
+- Shared across all projects
 
-### R7: Package API Model
+## API Endpoints
+
+### Package Management
+
+| Method | Endpoint | Description | Response |
+|--------|----------|-------------|----------|
+| GET | `/api/packages` | List installed packages | `Package[]` |
+| GET | `/api/packages/search?q=` | Search registry | `PackageSearchResult[]` |
+| POST | `/api/packages/:id/install` | Install package | SSE stream |
+| POST | `/api/packages/:id/uninstall` | Uninstall package | 204 No Content |
+
+### Resource Search
+
+| Method | Endpoint | Description | Response |
+|--------|----------|-------------|----------|
+| GET | `/api/search/extensions?q=&package=` | Search extensions | `Extension[]` |
+| GET | `/api/search/valuesets?q=` | Search value sets | `ValueSet[]` |
+| GET | `/api/search/resources?q=&type=&package=` | Generic search | `SearchResult[]` |
+
+## SSE Event Format
+
+```typescript
+type InstallEvent =
+  | { type: 'start'; data: { packageId: string; totalBytes?: number } }
+  | { type: 'progress'; data: { packageId: string; downloadedBytes: number; totalBytes?: number; percentage: number } }
+  | { type: 'extracting'; data: { packageId: string } }
+  | { type: 'indexing'; data: { packageId: string } }
+  | { type: 'complete'; data: { package: Package } }
+  | { type: 'error'; data: { packageId: string; message: string; code: string } };
+```
+
+## Data Types
+
 ```rust
-pub struct PackageManager {
-    canonical_facade: CanonicalFacade,
-    loaded_packages: HashMap<PackageId, Package>,
-    registry_client: RegistryClient,
+// Package info returned from API
+pub struct PackageDto {
+    pub id: String,              // "hl7.fhir.us.core@6.1.0"
+    pub name: String,            // "hl7.fhir.us.core"
+    pub version: String,         // "6.1.0"
+    pub description: Option<String>,
+    pub fhir_version: String,
+    pub installed: bool,
+    pub size: String,            // "12.5 MB"
+    pub installed_at: Option<DateTime<Utc>>,
+    pub resource_counts: Option<PackageResourceCounts>,
 }
 
-pub struct Package {
-    pub id: String,
-    pub version: String,
-    pub fhir_version: Vec<FhirVersion>,
-    pub dependencies: Vec<PackageDependency>,
-    pub resources: HashMap<CanonicalUrl, Resource>,
+// Resource counts in a package
+pub struct PackageResourceCounts {
+    pub profiles: u32,
+    pub extensions: u32,
+    pub value_sets: u32,
+    pub code_systems: u32,
+    pub total: u32,
 }
 ```
 
-### R8: Caching and Performance
-- Cache registry search results
-- Cache package metadata
-- Lazy-load package resources
-- Efficient resource lookup by canonical URL
+## Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `src/api/packages.rs` | Package API routes |
+| `src/api/packages_dto.rs` | DTOs and SSE event types |
+| `src/api/search_api.rs` | Resource search endpoints |
+| `src/state.rs` | Add CanonicalManager to AppState |
 
 ## Acceptance Criteria
 
-- [ ] Successfully loads packages from maki cache
-- [ ] Connects to packages.fhir.org registry
-- [ ] Searches registry for packages
-- [ ] Downloads and installs packages
-- [ ] Resolves transitive dependencies
-- [ ] Indexes package resources
-- [ ] Resolves canonical URLs correctly
-- [ ] Search priority (local > packages > core) works
-- [ ] Resource search finds resources by name
-- [ ] Full-text search works efficiently
-- [ ] Package metadata is cached
-- [ ] Lazy loading improves performance
-- [ ] Missing dependency detection works
-- [ ] Circular dependency detection works
-- [ ] Documentation for package management
+- [ ] `GET /api/packages` returns installed packages
+- [ ] `POST /api/packages/:id/install` streams SSE progress events
+- [ ] `POST /api/packages/:id/uninstall` removes package
+- [ ] `GET /api/packages/search` queries registry
+- [ ] `GET /api/search/extensions` searches SQLite index
+- [ ] `GET /api/search/valuesets` searches SQLite index
+- [ ] `GET /api/search/resources` supports filtering
+- [ ] Error responses follow standard format
+- [ ] Unit tests for DTOs and helpers
 
 ## Dependencies
-- **Backend 01**: Toolchain Alignment (maki-core integration)
 
-## Related Files
-- `crates/profile-builder/src/packages/mod.rs` (new)
-- `crates/profile-builder/src/packages/manager.rs` (new)
-- `crates/profile-builder/src/packages/registry.rs` (new)
-- `crates/profile-builder/src/packages/resolver.rs` (new)
-- `crates/profile-builder/src/packages/cache.rs` (new)
-- `crates/server/src/routes/packages.rs` (new)
+- **Backend 01**: Toolchain Alignment (maki-core, octofhir-canonical-manager)
 
 ## Priority
-🟡 High - Required for package dependencies
 
-## Estimated Complexity
-High - 2-3 weeks
+High - Required for package-based profile development
+
+## Notes
+
+- Uses `octofhir-canonical-manager` for all storage and search
+- Default registry: packages.fhir.org
+- Global installation (not per-project)
+- SSE for real-time progress updates

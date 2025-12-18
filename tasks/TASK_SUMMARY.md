@@ -1,7 +1,7 @@
 # Task Summary - FHIR Profile Builder Implementation
 
 **Date Created**: 2025-12-18
-**Total Tasks**: 38 (18 Backend + 20 UI)
+**Total Tasks**: 41 (18 Backend + 23 UI)
 **Estimated Timeline**: 65-85 weeks total (can be parallelized)
 
 ## Overview
@@ -70,7 +70,7 @@ All tasks from IMPLEMENTATION_PLAN.md have been covered:
 
 **Critical Path**: 01 → 02 → 03/04 → 05 → 06 → 09 → 13 → 14 → 17
 
-### UI Tasks (20 total)
+### UI Tasks (23 total)
 
 | Category | Tasks | Total |
 |----------|-------|-------|
@@ -81,7 +81,7 @@ All tasks from IMPLEMENTATION_PLAN.md have been covered:
 | **Supporting Features** | Search, Undo/Redo, Quick actions, Templates | 4 |
 | **Integration** | Editor page, Testing | 2 |
 
-**Critical Path**: 01 → 02 → 03 → 04 → 05 → 06/07 → 19 → 20
+**Critical Path**: 01 → 02 → 03 → 04 → 05 → 06/07 → 19 → 20 → 21/22
 
 ## Parallel Development Strategy
 
@@ -183,7 +183,7 @@ Following the plan's parallel development approach:
 - [ ] Validation parity with IG Publisher
 - [ ] Performance targets met
 - [ ] Zero data loss in round-trip tests
-- [ ] All 38 tasks completed
+- [ ] All 41 tasks completed
 - [ ] Production deployment successful
 
 ## Resource Requirements
@@ -223,7 +223,7 @@ Following the plan's parallel development approach:
 
 All task files are located in:
 - `tasks/backend/` - 18 files (01-*.md through 18-*.md)
-- `tasks/ui/` - 20 files (01-*.md through 20-*.md)
+- `tasks/ui/` - 23 files (01-*.md through 23-*.md)
 - `tasks/README.md` - Task index and guidelines
 
 Each task file contains:

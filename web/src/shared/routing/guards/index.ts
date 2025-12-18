@@ -1,0 +1,1 @@
+export { useProfileResourceGuard } from './useProfileResourceGuard';

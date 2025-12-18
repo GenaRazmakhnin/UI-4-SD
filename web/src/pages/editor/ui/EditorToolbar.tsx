@@ -19,6 +19,7 @@ import {
   IconFileCode,
   IconSettings,
 } from '@tabler/icons-react';
+import type { ProjectResourceKind } from '@shared/types';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type ExportFormat = 'json' | 'fsh';
@@ -26,6 +27,7 @@ export type ExportFormat = 'json' | 'fsh';
 interface EditorToolbarProps {
   profileName: string;
   profileType?: string;
+  resourceKind?: ProjectResourceKind | string;
   saveStatus: SaveStatus;
   hasUnsavedChanges: boolean;
   isValidating: boolean;
@@ -101,6 +103,11 @@ export function EditorToolbar({
         <Text fw={600} size="sm">
           {profileName}
         </Text>
+        {resourceKind && (
+          <Badge variant="light" size="sm" color={resourceKindColor(resourceKind)}>
+            {formatResourceKind(resourceKind)}
+          </Badge>
+        )}
         {profileType && (
           <Badge variant="light" size="sm" color="blue">
             {profileType}
@@ -199,4 +206,44 @@ export function EditorToolbar({
       </Group>
     </Group>
   );
+}
+
+function resourceKindColor(kind: ProjectResourceKind | string) {
+  switch (kind) {
+    case 'profile':
+      return 'blue';
+    case 'extension':
+      return 'cyan';
+    case 'valueset':
+      return 'violet';
+    case 'codesystem':
+      return 'grape';
+    case 'instance':
+      return 'teal';
+    default:
+      return 'gray';
+  }
+}
+
+function formatResourceKind(kind: ProjectResourceKind | string) {
+  switch (kind) {
+    case 'valueset':
+      return 'ValueSet';
+    case 'codesystem':
+      return 'CodeSystem';
+    case 'extension':
+      return 'Extension';
+    case 'instance':
+      return 'Instance';
+    case 'operation':
+      return 'Operation';
+    case 'mapping':
+      return 'Mapping';
+    case 'example':
+      return 'Example';
+    case 'profile':
+      return 'Profile';
+    default:
+      return `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`;
+  }
 }

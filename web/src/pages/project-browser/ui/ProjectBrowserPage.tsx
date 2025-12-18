@@ -3,7 +3,7 @@ import { Container, Stack, Title } from '@mantine/core';
 
 export function ProjectBrowserPage() {
   return (
-    <Container size="lg" py="xl">
+    <Container fluid py="xl" px="md">
       <Stack gap="xl">
         <Title order={1}>Projects</Title>
 

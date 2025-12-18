@@ -1,0 +1,26 @@
+# Cargo configuration for UI-4-SD FHIR Profile Builder
+# Configures paths and build settings for maki integration
+
+[alias]
+# Common development aliases
+c = "check"
+b = "build"
+t = "test"
+r = "run"
+br = "build --release"
+
+[build]
+# Enable incremental compilation for faster dev builds
+incremental = true
+
+[env]
+# Set default log level for development
+RUST_LOG = { value = "info", force = false }
+
+[target.x86_64-apple-darwin]
+# Optimize linker for macOS Intel
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[target.aarch64-apple-darwin]
+# Settings for Apple Silicon
+# Note: lld not fully supported on ARM macOS, using default linker

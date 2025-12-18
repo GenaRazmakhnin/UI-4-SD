@@ -45,22 +45,22 @@ pub struct EditHistory {
 - Document chosen strategy
 
 ### R7: API Endpoints
-**POST `/api/profiles/:id/undo`**
+**POST `/api/projects/:projectId/profiles/:profileId/undo`**
 - Undo last operation
 - Return updated profile state
 - Return error if nothing to undo
 
-**POST `/api/profiles/:id/redo`**
+**POST `/api/projects/:projectId/profiles/:profileId/redo`**
 - Redo next operation
 - Return updated profile state
 - Return error if nothing to redo
 
-**GET `/api/profiles/:id/history`**
+**GET `/api/projects/:projectId/profiles/:profileId/history`**
 - Return operation history
 - Include current index
 - Mark saved state
 
-**POST `/api/profiles/:id/history/goto`**
+**POST `/api/projects/:projectId/profiles/:profileId/history/goto`**
 - Jump to specific operation index
 - Apply undo/redo as needed
 - Return updated state

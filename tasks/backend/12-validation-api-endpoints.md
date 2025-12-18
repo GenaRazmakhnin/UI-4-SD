@@ -6,7 +6,7 @@ Implement API endpoints for profile validation, including incremental validation
 ## Requirements
 
 ### R1: Validate Profile
-**POST `/api/profiles/:id/validate`**
+**POST `/api/projects/:projectId/profiles/:profileId/validate`**
 - Request body: validation options (level, include_terminology, run_parity)
 - Run validation at specified level:
   - `fast`: IR validation only
@@ -16,20 +16,20 @@ Implement API endpoints for profile validation, including incremental validation
 - Cache validation results
 
 ### R2: Validate Element
-**POST `/api/profiles/:id/elements/:path/validate`**
+**POST `/api/projects/:projectId/profiles/:profileId/elements/:path/validate`**
 - Validate a specific element and its constraints
 - Return element-specific diagnostics
 - Include inherited constraint validation
 - Suggest quick fixes
 
 ### R3: Get Validation Results
-**GET `/api/profiles/:id/validation`**
+**GET `/api/projects/:projectId/profiles/:profileId/validation`**
 - Return cached validation results
 - Include validation metadata (timestamp, level)
 - Return 404 if no validation has been run
 
 ### R4: Publisher Parity Check
-**POST `/api/profiles/:id/parity`**
+**POST `/api/projects/:projectId/profiles/:profileId/parity`**
 - Export profile to SD JSON
 - Run HL7 Validator against SD
 - Parse and map validator output
@@ -37,7 +37,7 @@ Implement API endpoints for profile validation, including incremental validation
 - Return mapped diagnostics
 
 ### R5: Batch Validation
-**POST `/api/validate/batch`**
+**POST `/api/projects/:projectId/validate/batch`**
 - Request body: array of profile IDs
 - Validate multiple profiles
 - Return validation results for each
@@ -72,7 +72,7 @@ Implement API endpoints for profile validation, including incremental validation
 ```
 
 ### R7: Quick Fix Application
-**POST `/api/profiles/:id/apply-fix`**
+**POST `/api/projects/:projectId/profiles/:profileId/apply-fix`**
 - Request body: quick fix operation
 - Apply suggested fix
 - Re-validate element

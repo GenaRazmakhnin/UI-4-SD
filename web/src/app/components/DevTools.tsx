@@ -6,6 +6,6 @@ export function DevTools() {
   if (!ENV.isDev) return null;
 
   return (
-    <ReactQueryDevtools initialIsOpen={false} position="bottom-left" buttonPosition="bottom-left" />
+    <ReactQueryDevtools initialIsOpen={false}  buttonPosition="bottom-left" />
   );
 }

@@ -1,9 +1,10 @@
 import { ProfileEditorPage } from '@pages/editor';
 import { NotFoundPage } from '@pages/not-found';
 import { PackagesPage } from '@pages/packages';
-import { ProjectBrowserPage } from '@pages/project-browser';
+import { ProjectDetailsPage, ProjectsPage } from '@pages/projects';
+import { ProjectTreePage } from '@pages/project-tree';
 import { SettingsPage } from '@pages/settings';
-import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
+import { Navigate, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { RootLayout } from '../layouts/RootLayout';
 
 // Root route with layout
@@ -16,13 +17,34 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: ProjectBrowserPage,
+  component: () => <Navigate to="/projects" />,
 });
 
-// Profile Editor route with dynamic profileId
-const editorRoute = createRoute({
+const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/editor/$profileId',
+  path: '/projects',
+  component: ProjectsPage,
+});
+
+const projectDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId',
+  component: ProjectDetailsPage,
+});
+
+const projectTreeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/tree',
+  component: ProjectTreePage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === 'string' ? search.q : '',
+  }),
+});
+
+// Profile Editor route with dynamic project and profile ids
+const profileEditorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/profiles/$profileId',
   component: ProfileEditorPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
@@ -60,7 +82,10 @@ const aboutRoute = createRoute({
 // Create route tree
 export const routeTree = rootRoute.addChildren([
   indexRoute,
-  editorRoute,
+  projectsRoute,
+  projectDetailRoute,
+  projectTreeRoute,
+  profileEditorRoute,
   packagesRoute,
   settingsRoute,
   aboutRoute,

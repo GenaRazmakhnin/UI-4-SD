@@ -1,0 +1,98 @@
+[package]
+name = "niten"
+description = "Backend server for FHIR Profile Builder UI"
+version = "0.1.0"
+authors = ["OctoFHIR Team <funyloony@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/octofhir/niten"
+homepage = "https://github.com/octofhir"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+# Core FHIR tooling from maki
+maki-core = { path = "../maki/crates/maki-core" }
+maki-decompiler = { path = "../maki/crates/maki-decompiler" }
+
+# Async runtime - async-first design
+tokio = { version = "1", features = ["full", "signal"] }
+tokio-stream = "0.1"
+async-trait = "0.1"
+futures = "0.3"
+
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+tower = { version = "0.5", features = ["timeout"] }
+tower-http = { version = "0.6", features = ["cors", "fs", "trace", "timeout", "set-header"] }
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive", "env"] }
+
+# Static file embedding for production build
+rust-embed = { version = "8", features = ["mime-guess", "compression"] }
+
+# HTTP client for development proxy
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
+# MIME type detection
+mime_guess = "2"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Concurrent data structures
+dashmap = "6"
+
+# Unique identifiers for stable UI IDs
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Ordered maps for deterministic serialization
+indexmap = { version = "2.7", features = ["serde"] }
+
+# FHIR package management
+octofhir-canonical-manager = { version = "0.1.21", default-features = false, features = ["cli", "sqlite"] }
+
+# FHIRPath engine for constraint validation and expression parsing
+octofhir-fhirpath = { version = "0.4.32" }
+
+# Hashing for ETag generation
+sha2 = "0.10"
+
+# ZIP file creation for bulk exports
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3"
+
+[[bin]]
+name = "niten"
+path = "src/main.rs"
+
+[lib]
+name = "niten"
+path = "src/lib.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+strip = true
+
+[profile.dev]
+debug = true
+opt-level = 0
+incremental = true

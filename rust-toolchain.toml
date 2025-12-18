@@ -1,0 +1,6 @@
+# Rust toolchain configuration for UI-4-SD FHIR Profile Builder
+# Aligned with maki project requirements (edition 2024)
+
+[toolchain]
+channel = "1.92"
+components = ["rustfmt", "clippy", "rust-analyzer"]

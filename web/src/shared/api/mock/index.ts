@@ -3,9 +3,16 @@ import type {
   ExportResult,
   Package,
   Profile,
+  CreateProjectInput,
+  UpdateProjectInput,
+  Project,
+  ProjectTreeNode,
+  CreateArtifactInput,
+  CreatedArtifact,
   SearchFilters,
   SearchResult,
   ValidationResult,
+  ProjectResourceMetadata,
 } from '@shared/types';
 import * as fixtures from './fixtures';
 import { simulateDelay, simulateError } from './utils';
@@ -39,6 +46,97 @@ function matchesFilters(item: SearchResult, filters?: SearchFilters): boolean {
 }
 
 export const mockApi = {
+  projects: {
+    async list(): Promise<Project[]> {
+      await simulateDelay(200, 400);
+      if (simulateError(0.05)) {
+        throw new Error('Failed to load projects');
+      }
+      return [...fixtures.mockProjects];
+    },
+
+    async get(id: string): Promise<Project> {
+      await simulateDelay(150, 300);
+      const project = fixtures.mockProjectsById[id];
+      if (!project) {
+        throw new Error(`Project ${id} not found`);
+      }
+
+      const lastOpenedAt = new Date().toISOString();
+      project.lastOpenedAt = lastOpenedAt;
+      project.updatedAt = project.updatedAt || lastOpenedAt;
+
+      return { ...project };
+    },
+
+  async create(input: CreateProjectInput): Promise<Project> {
+    await simulateDelay(250, 500);
+    if (simulateError(0.08)) {
+      throw new Error('Failed to create project');
+    }
+
+      const project = fixtures.createMockProject({
+        name: input.name.trim(),
+        fhirVersion: input.fhirVersion,
+        templateId: input.templateId,
+        description: input.description,
+        packageId: input.packageId,
+        canonicalBase: input.canonicalBase,
+        version: input.version,
+        publisher: input.publisher,
+        dependencies: input.dependencies,
+      });
+
+      return { ...project };
+    },
+
+    async update(id: string, payload: UpdateProjectInput): Promise<Project> {
+      await simulateDelay(200, 400);
+      const project = fixtures.mockProjectsById[id];
+      if (!project) {
+        throw new Error(`Project ${id} not found`);
+      }
+
+      const updated: Project = {
+        ...project,
+        ...payload,
+        dependencies: payload.dependencies ?? project.dependencies ?? [],
+        updatedAt: new Date().toISOString(),
+      };
+
+      fixtures.mockProjectsById[id] = updated;
+      const index = fixtures.mockProjects.findIndex((p) => p.id === id);
+      if (index !== -1) {
+        fixtures.mockProjects[index] = updated;
+      }
+
+      return { ...updated };
+    },
+
+    async tree(id: string): Promise<ProjectTreeNode[]> {
+      await simulateDelay(120, 260);
+      const tree = fixtures.mockProjectTrees[id] ?? fixtures.mockProjectTrees.default;
+      return fixtures.cloneProjectTree(tree);
+    },
+
+    async resource(projectId: string, resourceId: string): Promise<ProjectResourceMetadata> {
+      await simulateDelay(120, 260);
+      const tree = fixtures.mockProjectTrees[projectId] ?? fixtures.mockProjectTrees.default;
+      const node = fixtures.findResourceNodeById(tree, resourceId);
+      if (!node || node.kind !== 'file') {
+        throw new Error(`Resource ${resourceId} not found`);
+      }
+      return fixtures.toResourceMetadata(projectId, node);
+    },
+
+    async createArtifact(projectId: string, input: CreateArtifactInput): Promise<CreatedArtifact> {
+      await simulateDelay(150, 320);
+      const tree = fixtures.mockProjectTrees[projectId] ?? fixtures.mockProjectTrees.default;
+      const result = fixtures.addMockArtifact(projectId, tree, input);
+      return { ...result };
+    },
+  },
+
   profiles: {
     async list(): Promise<Profile[]> {
       await simulateDelay(200, 400);
