@@ -6,6 +6,7 @@ import { ProjectDetailsPage, ProjectsPage } from '@pages/projects';
 import { SettingsPage } from '@pages/settings';
 import { createRootRoute, createRoute, createRouter, Navigate } from '@tanstack/react-router';
 import { RootLayout } from '../layouts/RootLayout';
+import { BuilderPage } from '@pages/builder';
 
 // Root route with layout
 const rootRoute = createRootRoute({
@@ -79,6 +80,13 @@ const aboutRoute = createRoute({
   ),
 });
 
+// Builder route
+const builderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/builder',
+  component: BuilderPage,
+});
+
 // Create route tree
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -89,6 +97,7 @@ export const routeTree = rootRoute.addChildren([
   packagesRoute,
   settingsRoute,
   aboutRoute,
+  builderRoute
 ]);
 
 // Create router instance
