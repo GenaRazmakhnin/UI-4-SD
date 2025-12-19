@@ -31,9 +31,6 @@ clap = { version = "4", features = ["derive", "env"] }
 # Static file embedding for production build
 rust-embed = { version = "8", features = ["mime-guess", "compression"] }
 
-# HTTP client for development proxy
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
-
 # MIME type detection
 mime_guess = "2"
 

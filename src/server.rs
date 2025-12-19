@@ -4,7 +4,6 @@
 //! - API routes for profile management
 //! - Static file serving with embedded assets
 //! - SPA routing fallback
-//! - Development proxy to Vite
 //! - Graceful shutdown
 
 use std::time::Duration;
@@ -12,7 +11,7 @@ use std::time::Duration;
 use axum::{
     body::Body,
     extract::State,
-    http::{header, Method, Request, StatusCode, Uri},
+    http::{header, Method, StatusCode, Uri},
     response::{IntoResponse, Response},
     routing::get,
     Json, Router,
@@ -25,7 +24,10 @@ use tower_http::{
 };
 
 use crate::{
-    api::{export_routes, package_routes, profile_routes, project_export_routes, search_routes},
+    api::{
+        export_routes, history_routes, package_routes, profile_routes, project_export_routes,
+        search_routes, validation_routes,
+    },
     state::AppState,
     static_files::{has_embedded_assets, serve_static},
     Config, Result,
@@ -61,7 +63,14 @@ impl Server {
         let api_routes = Router::new()
             .route("/status", get(status))
             .route("/projects", get(list_projects))
-            .nest("/projects/{projectId}/profiles", profile_routes().merge(export_routes()))
+            // Profile routes with export, validation, and history
+            .nest(
+                "/projects/{projectId}/profiles",
+                profile_routes()
+                    .merge(export_routes())
+                    .merge(validation_routes())
+                    .merge(history_routes()),
+            )
             .nest("/projects/{projectId}", project_export_routes())
             // Package management routes
             .nest("/packages", package_routes())
@@ -74,14 +83,8 @@ impl Server {
             .route("/health", get(health_check))
             .nest("/api", api_routes);
 
-        // Add static file serving or dev proxy
-        if config.dev_mode {
-            tracing::info!(
-                "Development mode enabled, proxying to: {}",
-                config.vite_dev_url
-            );
-            router = router.fallback(dev_proxy_handler);
-        } else if has_embedded_assets() {
+        // Add static file serving
+        if has_embedded_assets() {
             tracing::info!("Serving embedded static assets");
             router = router.fallback(spa_fallback);
         } else {
@@ -142,10 +145,6 @@ impl Server {
         let shutdown_timeout = self.config.shutdown_timeout_duration();
 
         tracing::info!("Server listening on http://{}", addr);
-
-        if self.config.dev_mode {
-            tracing::info!("Development mode: proxying UI to {}", self.config.vite_dev_url);
-        }
 
         let listener = tokio::net::TcpListener::bind(addr).await?;
 
@@ -254,62 +253,6 @@ async fn spa_fallback(uri: Uri) -> Response<Body> {
     serve_static(uri).await.into_response()
 }
 
-/// Development proxy handler - proxies requests to Vite dev server.
-async fn dev_proxy_handler(
-    State(state): State<AppState>,
-    req: Request<Body>,
-) -> Response<Body> {
-    let vite_url = &state.config().vite_dev_url;
-    let path = req.uri().path();
-
-    // Don't proxy API requests
-    if path.starts_with("/api/") || path == "/health" {
-        return Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(r#"{"error":"Not found","status":404}"#))
-            .unwrap();
-    }
-
-    let target_url = format!("{}{}", vite_url, path);
-
-    match proxy_request(&target_url).await {
-        Ok(response) => response,
-        Err(e) => {
-            tracing::warn!("Proxy error: {}", e);
-            Response::builder()
-                .status(StatusCode::BAD_GATEWAY)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(format!(
-                    r#"{{"error":"Proxy error: {}","status":502}}"#,
-                    e
-                )))
-                .unwrap()
-        }
-    }
-}
-
-/// Proxy a request to the target URL.
-async fn proxy_request(target_url: &str) -> anyhow::Result<Response<Body>> {
-    let client = reqwest::Client::new();
-    let response = client.get(target_url).send().await?;
-
-    let status = StatusCode::from_u16(response.status().as_u16())?;
-    let mut builder = Response::builder().status(status);
-
-    // Copy relevant headers
-    for (key, value) in response.headers() {
-        if key != "transfer-encoding" && key != "connection" {
-            if let Ok(value) = value.to_str() {
-                builder = builder.header(key.as_str(), value);
-            }
-        }
-    }
-
-    let body = response.bytes().await?;
-    Ok(builder.body(Body::from(body))?)
-}
-
 /// Handler when no UI is available.
 async fn no_ui_handler(uri: Uri) -> Response<Body> {
     let path = uri.path();
@@ -332,11 +275,7 @@ async fn no_ui_handler(uri: Uri) -> Response<Body> {
 <body style="font-family: sans-serif; padding: 2rem; text-align: center;">
 <h1>UI Not Available</h1>
 <p>The embedded UI assets are not available.</p>
-<p>Either:</p>
-<ul style="text-align: left; display: inline-block;">
-<li>Run in development mode with <code>--dev-mode</code> flag</li>
-<li>Build the UI with <code>cd web && bun run build</code></li>
-</ul>
+<p>Build the UI with <code>cd web && bun run build</code></p>
 <p>API endpoints are still available at <code>/api/*</code></p>
 </body>
 </html>"#,
@@ -355,9 +294,9 @@ mod tests {
     }
 
     #[test]
-    fn test_build_cors_layer_dev_mode() {
+    fn test_build_cors_layer_permissive() {
         let config = Config {
-            dev_mode: true,
+            cors_origins: Some("*".to_string()),
             ..Default::default()
         };
         // Should not panic

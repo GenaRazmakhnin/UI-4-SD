@@ -9,7 +9,7 @@ default:
 
 # Run backend in development mode (with Vite proxy)
 dev:
-    cargo run -- --workspace-dir ./workspace --dev-mode --log-level debug
+    cargo run -- --workspace-dir ./workspace --log-level debug
 
 # Run backend only (no UI proxy)
 dev-backend:

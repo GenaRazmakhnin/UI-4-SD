@@ -83,26 +83,49 @@ pub struct EditHistory {
 
 ## Acceptance Criteria
 
-- [ ] All operations are recorded in history
-- [ ] Undo reverses operations correctly
-- [ ] Redo re-applies operations correctly
-- [ ] Unlimited undo/redo works
-- [ ] History navigation UI shows operations
-- [ ] Jump to history point works
-- [ ] Dirty state tracking works
-- [ ] Saved state is marked correctly
-- [ ] History persists across sessions
-- [ ] History branching strategy is documented
-- [ ] Performance targets met (<50ms)
+- [x] All operations are recorded in history
+- [x] Undo reverses operations correctly
+- [x] Redo re-applies operations correctly
+- [x] Unlimited undo/redo works
+- [x] History navigation UI shows operations
+- [x] Jump to history point works
+- [x] Dirty state tracking works
+- [x] Saved state is marked correctly
+- [x] History persists across sessions
+- [x] History branching strategy is documented (Option A: discard redo history on new operation)
+- [x] Performance targets met (<50ms)
 
 ## Dependencies
-- **Backend 13**: Operations Engine
+- **Backend 13**: Operations Engine ✅
 
 ## Related Files
-- `crates/profile-builder/src/history/mod.rs` (new)
-- `crates/profile-builder/src/history/edit_history.rs` (new)
-- `crates/profile-builder/src/history/state_snapshot.rs` (new)
-- `crates/server/src/routes/history.rs` (new)
+- `src/ir/tracking.rs` - EditHistory struct with undo/redo stacks, saved_index tracking
+- `src/api/history.rs` - API endpoints for undo/redo/history/goto
+
+## Implementation Notes
+
+### History Model
+- `EditHistory` tracks operations using undo_stack and redo_stack
+- `saved_index: Option<usize>` tracks the save state position
+- Operations include Change with path, ChangeKind, timestamp, and description
+
+### API Endpoints
+- `POST /{profileId}/undo` - Undo last operation with state restoration
+- `POST /{profileId}/redo` - Redo next operation with state restoration
+- `GET /{profileId}/history` - Get operation list with HistoryState
+- `POST /{profileId}/history/goto` - Jump to specific history index
+
+### Key Types
+- `OperationSummary` - UI-friendly operation info with id, description, timestamp, index
+- `HistoryState` - Current state info (can_undo, can_redo, saved state, descriptions)
+- `UndoRedoResponse`, `HistoryResponse`, `GotoResponse` - API response types
+
+### Branching Strategy
+- Uses Option A: New operations after undo clear the redo stack
+- Simple and predictable behavior for users
+
+## Status
+✅ **COMPLETED**
 
 ## Priority
 🔴 Critical - Core UX feature

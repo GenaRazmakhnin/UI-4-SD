@@ -59,5 +59,7 @@ pub use document::{DocumentMetadata, ProfileDocument, ProfileStatus};
 pub use element::{ElementNode, ElementSource, NodeId};
 pub use resource::{BaseDefinition, FhirVersion, ProfiledResource, StructureKind};
 pub use slicing::{Discriminator, DiscriminatorType, SliceNode, SlicingDefinition, SlicingRules};
-pub use tracking::{Change, ChangeKind, ChangeTracker, EditHistory, Operation};
+pub use tracking::{
+    Change, ChangeKind, ChangeTracker, EditHistory, HistoryState, Operation, OperationSummary,
+};
 pub use validation::{ValidationError, ValidationResult, ValidationSeverity};

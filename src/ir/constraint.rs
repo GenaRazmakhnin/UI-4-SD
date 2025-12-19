@@ -208,6 +208,18 @@ impl BindingStrength {
             Self::Example => "example",
         }
     }
+
+    /// Parse a binding strength from a string.
+    #[must_use]
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "required" => Self::Required,
+            "extensible" => Self::Extensible,
+            "preferred" => Self::Preferred,
+            "example" => Self::Example,
+            _ => Self::Extensible,
+        }
+    }
 }
 
 impl std::fmt::Display for BindingStrength {

@@ -260,6 +260,25 @@ impl ElementNode {
         }
     }
 
+    /// Find a descendant element by relative path (mutable).
+    pub fn find_descendant_mut(&mut self, relative_path: &str) -> Option<&mut ElementNode> {
+        let segments: Vec<&str> = relative_path.split('.').collect();
+        self.find_descendant_by_segments_mut(&segments)
+    }
+
+    fn find_descendant_by_segments_mut(&mut self, segments: &[&str]) -> Option<&mut ElementNode> {
+        if segments.is_empty() {
+            return Some(self);
+        }
+
+        let child = self.find_child_mut(segments[0])?;
+        if segments.len() == 1 {
+            Some(child)
+        } else {
+            child.find_descendant_by_segments_mut(&segments[1..])
+        }
+    }
+
     /// Find a node by its stable ID.
     #[must_use]
     pub fn find_by_id(&self, id: NodeId) -> Option<&ElementNode> {

@@ -44,6 +44,7 @@ export function EditorToolbar({
   profileType,
   saveStatus,
   hasUnsavedChanges,
+    resourceKind,
   isValidating,
   errorCount = 0,
   warningCount = 0,

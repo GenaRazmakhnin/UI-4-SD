@@ -42,19 +42,8 @@ pub struct Config {
     pub base_path: Option<String>,
 
     /// CORS allowed origins (comma-separated, or "*" for all)
-    /// In development mode, defaults to "*"
     #[arg(long, env = "CORS_ORIGINS")]
     pub cors_origins: Option<String>,
-
-    /// Enable development mode
-    /// - Proxies UI requests to Vite dev server
-    /// - Enables permissive CORS
-    #[arg(long, env = "DEV_MODE")]
-    pub dev_mode: bool,
-
-    /// Vite dev server URL (used when dev_mode is enabled)
-    #[arg(long, env = "VITE_DEV_URL", default_value = "http://localhost:5173")]
-    pub vite_dev_url: String,
 
     /// Request timeout in seconds
     #[arg(long, env = "REQUEST_TIMEOUT", default_value = "30")]
@@ -153,7 +142,6 @@ impl Config {
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect(),
-            None if self.dev_mode => vec!["*".to_string()],
             None => vec![],
         }
     }
@@ -169,12 +157,6 @@ impl Config {
     pub fn shutdown_timeout_duration(&self) -> std::time::Duration {
         std::time::Duration::from_secs(self.shutdown_timeout)
     }
-
-    /// Check if the server should proxy to Vite.
-    #[must_use]
-    pub fn should_proxy_to_vite(&self) -> bool {
-        self.dev_mode
-    }
 }
 
 impl Default for Config {
@@ -187,8 +169,6 @@ impl Default for Config {
             log_level: "info".to_string(),
             base_path: None,
             cors_origins: None,
-            dev_mode: false,
-            vite_dev_url: "http://localhost:5173".to_string(),
             request_timeout: 30,
             shutdown_timeout: 10,
         }
@@ -204,7 +184,6 @@ mod tests {
         let config = Config::default();
         assert_eq!(config.host, "127.0.0.1");
         assert_eq!(config.port, 3001);
-        assert!(!config.dev_mode);
     }
 
     #[test]
@@ -219,16 +198,9 @@ mod tests {
 
     #[test]
     fn test_cors_origins_list() {
-        // No origins set, not dev mode
+        // No origins set
         let config = Config::default();
         assert!(config.cors_origins_list().is_empty());
-
-        // No origins set, dev mode
-        let config = Config {
-            dev_mode: true,
-            ..Default::default()
-        };
-        assert_eq!(config.cors_origins_list(), vec!["*"]);
 
         // Wildcard
         let config = Config {

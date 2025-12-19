@@ -39,6 +39,7 @@
 pub mod dto;
 pub mod export;
 pub mod export_dto;
+pub mod history;
 pub mod packages;
 pub mod packages_dto;
 pub mod profiles;
@@ -48,6 +49,7 @@ pub mod validation;
 
 pub use dto::*;
 pub use export::{export_routes, project_export_routes};
+pub use history::history_routes;
 pub use packages::package_routes;
 pub use profiles::profile_routes;
 pub use search_api::search_routes;

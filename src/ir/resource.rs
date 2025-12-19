@@ -251,6 +251,21 @@ impl ProfiledResource {
         self.root.find_descendant(relative)
     }
 
+    /// Find an element by path (mutable).
+    pub fn find_element_mut(&mut self, path: &str) -> Option<&mut ElementNode> {
+        if path == self.root.path {
+            return Some(&mut self.root);
+        }
+
+        // Strip resource type prefix if present
+        let relative = path
+            .strip_prefix(&self.root.path)
+            .and_then(|s| s.strip_prefix('.'))
+            .unwrap_or(path);
+
+        self.root.find_descendant_mut(relative)
+    }
+
     /// Find an element by its stable ID.
     #[must_use]
     pub fn find_by_id(&self, id: super::element::NodeId) -> Option<&ElementNode> {

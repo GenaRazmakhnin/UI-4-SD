@@ -8,8 +8,10 @@ use std::sync::Arc;
 
 use dashmap::DashMap;
 use octofhir_canonical_manager::CanonicalManager;
+use serde::{Deserialize, Serialize};
 use tokio::sync::{OnceCell, RwLock};
 
+use crate::validation::ValidationResult;
 use crate::Config;
 
 /// Shared application state accessible from all request handlers.
@@ -32,6 +34,63 @@ struct AppStateInner {
     request_count: RwLock<u64>,
     /// FHIR package manager (lazy-initialized).
     canonical_manager: OnceCell<Arc<CanonicalManager>>,
+    /// Cached validation results (key: "project_id/profile_id").
+    validation_cache: DashMap<String, CachedValidation>,
+    /// Validation configuration.
+    validation_config: RwLock<ValidationConfig>,
+}
+
+/// Cached validation result with metadata.
+#[derive(Debug, Clone)]
+pub struct CachedValidation {
+    /// The validation result.
+    pub result: ValidationResult,
+    /// Profile modification timestamp when validated.
+    pub profile_modified_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Validation configuration settings.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationConfig {
+    /// Default validation level.
+    #[serde(default = "default_validation_level")]
+    pub default_level: String,
+    /// Terminology service URL (if any).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terminology_service_url: Option<String>,
+    /// HL7 Validator path for parity checks.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hl7_validator_path: Option<String>,
+    /// Cache validation results.
+    #[serde(default = "default_true")]
+    pub cache_enabled: bool,
+    /// Cache TTL in seconds.
+    #[serde(default = "default_cache_ttl")]
+    pub cache_ttl_seconds: u64,
+}
+
+fn default_validation_level() -> String {
+    "structural".to_string()
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_cache_ttl() -> u64 {
+    300 // 5 minutes
+}
+
+impl Default for ValidationConfig {
+    fn default() -> Self {
+        Self {
+            default_level: default_validation_level(),
+            terminology_service_url: None,
+            hl7_validator_path: None,
+            cache_enabled: true,
+            cache_ttl_seconds: default_cache_ttl(),
+        }
+    }
 }
 
 /// Session data for a project.
@@ -56,6 +115,8 @@ impl AppState {
                 started_at: chrono::Utc::now(),
                 request_count: RwLock::new(0),
                 canonical_manager: OnceCell::new(),
+                validation_cache: DashMap::new(),
+                validation_config: RwLock::new(ValidationConfig::default()),
             }),
         }
     }
@@ -171,6 +232,61 @@ impl AppState {
     #[must_use]
     pub fn uptime_seconds(&self) -> i64 {
         (chrono::Utc::now() - self.inner.started_at).num_seconds()
+    }
+
+    // === Validation Cache Methods ===
+
+    /// Get cached validation result for a profile.
+    pub fn get_cached_validation(
+        &self,
+        project_id: &str,
+        profile_id: &str,
+    ) -> Option<CachedValidation> {
+        let key = format!("{}/{}", project_id, profile_id);
+        self.inner.validation_cache.get(&key).map(|v| v.clone())
+    }
+
+    /// Store validation result in cache.
+    pub fn cache_validation(
+        &self,
+        project_id: &str,
+        profile_id: &str,
+        result: ValidationResult,
+        profile_modified_at: chrono::DateTime<chrono::Utc>,
+    ) {
+        let key = format!("{}/{}", project_id, profile_id);
+        self.inner.validation_cache.insert(
+            key,
+            CachedValidation {
+                result,
+                profile_modified_at,
+            },
+        );
+    }
+
+    /// Invalidate cached validation for a profile.
+    pub fn invalidate_validation(&self, project_id: &str, profile_id: &str) {
+        let key = format!("{}/{}", project_id, profile_id);
+        self.inner.validation_cache.remove(&key);
+    }
+
+    /// Invalidate all cached validations for a project.
+    pub fn invalidate_project_validations(&self, project_id: &str) {
+        let prefix = format!("{}/", project_id);
+        self.inner
+            .validation_cache
+            .retain(|k, _| !k.starts_with(&prefix));
+    }
+
+    /// Get validation configuration.
+    pub async fn validation_config(&self) -> ValidationConfig {
+        self.inner.validation_config.read().await.clone()
+    }
+
+    /// Update validation configuration.
+    pub async fn set_validation_config(&self, config: ValidationConfig) {
+        let mut current = self.inner.validation_config.write().await;
+        *current = config;
     }
 }
 

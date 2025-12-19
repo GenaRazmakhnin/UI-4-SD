@@ -2259,7 +2259,6 @@ dependencies = [
  "mime_guess",
  "octofhir-canonical-manager",
  "octofhir-fhirpath",
- "reqwest",
  "rust-embed",
  "serde",
  "serde_json",

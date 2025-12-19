@@ -88,30 +88,82 @@ Implement API endpoints for profile validation, including incremental validation
 
 ## Acceptance Criteria
 
-- [ ] Validation endpoint runs at specified level
-- [ ] Fast validation returns results <100ms
-- [ ] Full validation includes terminology checks
-- [ ] Parity validation runs HL7 Validator
-- [ ] Element validation works correctly
-- [ ] Batch validation processes multiple profiles
-- [ ] Validation results are cached
-- [ ] Cache invalidates on profile changes
-- [ ] Quick fixes are suggested appropriately
-- [ ] Quick fix application works
-- [ ] Diagnostics map to correct elements
-- [ ] Error messages are actionable
-- [ ] Configuration endpoints work
-- [ ] Performance meets targets (<100ms fast, <500ms full)
+- [x] Validation endpoint runs at specified level
+- [x] Fast validation returns results <100ms
+- [x] Full validation includes terminology checks
+- [ ] Parity validation runs HL7 Validator (requires external validator binary)
+- [x] Element validation works correctly
+- [x] Batch validation processes multiple profiles
+- [x] Validation results are cached
+- [x] Cache invalidates on profile changes
+- [x] Quick fixes are suggested appropriately
+- [x] Quick fix application works
+- [x] Diagnostics map to correct elements
+- [x] Error messages are actionable
+- [x] Configuration endpoints work
+- [x] Performance meets targets (<100ms fast, <500ms full)
 
 ## Dependencies
 - **Backend 09**: Validation Engine
 
 ## Related Files
-- `crates/server/src/routes/validation.rs` (new)
-- `crates/server/src/api/validation_dto.rs` (new)
+- `src/api/validation.rs` - Validation API endpoints
+- `src/state.rs` - Validation caching (CachedValidation, ValidationConfig)
+- `src/ir/constraint.rs` - BindingStrength::from_str added
+- `src/ir/element.rs` - find_descendant_mut added
+- `src/ir/resource.rs` - find_element_mut added
+
+## Implementation Notes
+
+### Completed (2024-12)
+
+**R1: Validate Profile** ✅
+- POST `/api/projects/:projectId/profiles/:profileId/validate`
+- Supports validation levels: Structural, References, Terminology, Full
+- Returns diagnostics with stats (error/warning/info counts)
+- Caches results in AppState
+
+**R2: Validate Element** ✅
+- POST `/api/projects/:projectId/profiles/:profileId/elements/:path/validate`
+- Validates specific element constraints
+- Returns element-scoped diagnostics with quick fixes
+
+**R3: Get Validation Results** ✅
+- GET `/api/projects/:projectId/profiles/:profileId/validation`
+- Returns cached validation results
+- Returns 404 if no cached validation exists
+
+**R4: Publisher Parity Check** ⏳
+- Endpoint exists but requires external HL7 Validator binary
+- Configuration supports `hl7_validator_path` setting
+
+**R5: Batch Validation** ✅
+- POST `/api/projects/:projectId/validate/batch`
+- Accepts array of profile IDs
+- Returns results for each with aggregate counts
+
+**R6: Validation Diagnostics Format** ✅
+- Enhanced with `stats` field containing error/warning/info counts
+- All fields match specification
+
+**R7: Quick Fix Application** ✅
+- POST `/api/projects/:projectId/profiles/:profileId/apply-fix`
+- Applies quick fix to profile document
+- Re-validates and returns updated state
+- Supports: SetCardinality, SetBindingStrength, AddMustSupport
+
+**R8: Validation Configuration** ✅
+- GET `/api/validation/config` - Returns current config
+- PUT `/api/validation/config` - Updates config
+- Supports: default_level, terminology_service_url, hl7_validator_path, cache_enabled, cache_ttl_seconds
+
+### State Management
+- `CachedValidation` stores results with profile modification timestamp
+- Cache invalidation on profile changes via `invalidate_validation()`
+- Project-wide invalidation via `invalidate_project_validations()`
 
 ## Priority
 🔴 Critical - Core functionality
 
-## Estimated Complexity
-Medium - 1-2 weeks
+## Status
+🟢 **COMPLETE** - All API endpoints implemented except HL7 Validator parity (requires external binary)

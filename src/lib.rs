@@ -39,6 +39,7 @@ pub mod export;
 pub mod fsh;
 pub mod import;
 pub mod ir;
+pub mod operations;
 pub mod server;
 pub mod state;
 pub mod static_files;

@@ -209,6 +209,18 @@ impl Operation {
 /// Maintains a stack of operations that have been performed, allowing
 /// users to undo and redo changes.
 ///
+/// # History Navigation
+///
+/// The history is represented as a linear sequence of operations. The
+/// `current_index` points to the current position:
+/// - Operations before `current_index` are in the past (can be undone)
+/// - Operations at or after `current_index` are in the future (can be redone)
+///
+/// # Saved State Tracking
+///
+/// The `saved_index` tracks where the document was last saved. This enables
+/// accurate dirty state detection: the document is dirty if `current_index != saved_index`.
+///
 /// # Example
 ///
 /// ```
@@ -239,6 +251,11 @@ pub struct EditHistory {
     /// Maximum number of operations to keep.
     #[serde(default = "default_max_history")]
     max_history: usize,
+
+    /// Index of the last saved state in the undo_stack.
+    /// None means either never saved or saved state was discarded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    saved_index: Option<usize>,
 }
 
 fn default_max_history() -> usize {
@@ -259,12 +276,14 @@ impl EditHistory {
             undo_stack: Vec::with_capacity(max_history),
             redo_stack: Vec::new(),
             max_history,
+            saved_index: None,
         }
     }
 
     /// Push a new operation onto the history.
     ///
     /// This clears the redo stack since we're starting a new branch.
+    /// The saved_index is preserved unless we push beyond it after undo.
     pub fn push(&mut self, operation: Operation) {
         // Clear redo stack - we're diverging from the redo path
         self.redo_stack.clear();
@@ -272,6 +291,15 @@ impl EditHistory {
         // Enforce max history limit
         if self.undo_stack.len() >= self.max_history {
             self.undo_stack.remove(0);
+            // Adjust saved_index when we remove old operations
+            if let Some(idx) = self.saved_index {
+                if idx == 0 {
+                    // Saved state was discarded
+                    self.saved_index = None;
+                } else {
+                    self.saved_index = Some(idx - 1);
+                }
+            }
         }
 
         self.undo_stack.push(operation);
@@ -336,6 +364,7 @@ impl EditHistory {
     pub fn clear(&mut self) {
         self.undo_stack.clear();
         self.redo_stack.clear();
+        self.saved_index = None;
     }
 
     /// Get the number of undoable operations.
@@ -349,6 +378,169 @@ impl EditHistory {
     pub fn redo_count(&self) -> usize {
         self.redo_stack.len()
     }
+
+    // === Saved State Tracking (R8) ===
+
+    /// Mark the current state as saved.
+    ///
+    /// This records the current position in history so we can track
+    /// whether the document has unsaved changes.
+    pub fn mark_saved(&mut self) {
+        self.saved_index = Some(self.undo_stack.len());
+    }
+
+    /// Check if the document has unsaved changes.
+    ///
+    /// Returns `true` if the current position differs from the saved position.
+    #[must_use]
+    pub fn has_unsaved_changes(&self) -> bool {
+        match self.saved_index {
+            Some(idx) => idx != self.undo_stack.len(),
+            None => !self.undo_stack.is_empty() || !self.redo_stack.is_empty(),
+        }
+    }
+
+    /// Check if we're at the saved state.
+    #[must_use]
+    pub fn is_at_saved_state(&self) -> bool {
+        self.saved_index == Some(self.undo_stack.len())
+    }
+
+    // === History Navigation (R5) ===
+
+    /// Get all operations for UI display.
+    ///
+    /// Returns a list of operation summaries with their position info.
+    #[must_use]
+    pub fn get_operations(&self) -> Vec<OperationSummary> {
+        let mut result = Vec::with_capacity(self.undo_stack.len() + self.redo_stack.len());
+
+        // Add undo stack (past operations, in order)
+        for (i, op) in self.undo_stack.iter().enumerate() {
+            result.push(OperationSummary {
+                id: op.id,
+                description: op.description.clone(),
+                timestamp: op.timestamp,
+                index: i,
+                is_current: false,
+                is_saved: self.saved_index == Some(i + 1),
+            });
+        }
+
+        // Mark current position
+        if let Some(last) = result.last_mut() {
+            last.is_current = true;
+        }
+
+        // Add redo stack (future operations, in reverse order so they show chronologically)
+        for (i, op) in self.redo_stack.iter().rev().enumerate() {
+            result.push(OperationSummary {
+                id: op.id,
+                description: op.description.clone(),
+                timestamp: op.timestamp,
+                index: self.undo_stack.len() + i,
+                is_current: false,
+                is_saved: false,
+            });
+        }
+
+        result
+    }
+
+    /// Get the current position in history.
+    #[must_use]
+    pub fn current_index(&self) -> usize {
+        self.undo_stack.len()
+    }
+
+    /// Get total number of operations in history.
+    #[must_use]
+    pub fn total_operations(&self) -> usize {
+        self.undo_stack.len() + self.redo_stack.len()
+    }
+
+    /// Jump to a specific position in history.
+    ///
+    /// Returns the operations needed to reach that position (undos or redos).
+    /// The operations are returned in the order they should be applied.
+    pub fn goto(&mut self, target_index: usize) -> Vec<Operation> {
+        let current = self.undo_stack.len();
+        let mut ops = Vec::new();
+
+        if target_index < current {
+            // Need to undo
+            for _ in target_index..current {
+                if let Some(op) = self.undo() {
+                    ops.push(op);
+                }
+            }
+        } else if target_index > current {
+            // Need to redo
+            let redo_count = (target_index - current).min(self.redo_stack.len());
+            for _ in 0..redo_count {
+                if let Some(op) = self.redo() {
+                    ops.push(op);
+                }
+            }
+        }
+
+        ops
+    }
+
+    /// Get history state summary for API responses.
+    #[must_use]
+    pub fn state(&self) -> HistoryState {
+        HistoryState {
+            current_index: self.undo_stack.len(),
+            total_operations: self.undo_stack.len() + self.redo_stack.len(),
+            can_undo: self.can_undo(),
+            can_redo: self.can_redo(),
+            undo_description: self.undo_description().map(String::from),
+            redo_description: self.redo_description().map(String::from),
+            is_at_saved_state: self.is_at_saved_state(),
+            has_unsaved_changes: self.has_unsaved_changes(),
+        }
+    }
+}
+
+/// Summary of an operation for UI display.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationSummary {
+    /// Operation ID.
+    pub id: uuid::Uuid,
+    /// Human-readable description.
+    pub description: String,
+    /// When the operation was performed.
+    pub timestamp: DateTime<Utc>,
+    /// Position in history (0-based).
+    pub index: usize,
+    /// Whether this is the current position.
+    pub is_current: bool,
+    /// Whether this position represents the saved state.
+    pub is_saved: bool,
+}
+
+/// History state summary for API responses.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoryState {
+    /// Current position in history.
+    pub current_index: usize,
+    /// Total number of operations.
+    pub total_operations: usize,
+    /// Whether undo is available.
+    pub can_undo: bool,
+    /// Whether redo is available.
+    pub can_redo: bool,
+    /// Description of the next undo operation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub undo_description: Option<String>,
+    /// Description of the next redo operation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redo_description: Option<String>,
+    /// Whether we're at the saved state.
+    pub is_at_saved_state: bool,
+    /// Whether there are unsaved changes.
+    pub has_unsaved_changes: bool,
 }
 
 /// Tracks which fields have been modified vs. inherited.

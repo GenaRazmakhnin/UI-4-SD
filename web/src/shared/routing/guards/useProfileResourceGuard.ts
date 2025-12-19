@@ -26,7 +26,7 @@ export function useProfileResourceGuard({ projectId, profileId }: ProfileResourc
           : 'Profile Editor is only available for IR resources in this project.',
         color: 'red',
       });
-      navigation.toProjectFiles(projectId);
+      // navigation.toProjectFiles(projectId);
     }
   }, [data?.resourceKind, data?.root, isError, isLoading, projectId]);
 

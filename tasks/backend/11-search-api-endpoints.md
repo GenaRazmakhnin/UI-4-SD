@@ -1,131 +1,123 @@
 # Task: Search API Endpoints
 
-## Description
-Implement search API endpoints for discovering resources (profiles, extensions, ValueSets) across loaded packages and project resources.
+## Status: Completed
 
-## Requirements
+Core search endpoints implemented with all enhancements.
 
-### R1: Resource Search
-**GET `/api/search/resources`**
-- Query parameters:
-  - `q`: search query (full-text)
-  - `type`: filter by resource type (Profile, Extension, ValueSet, etc.)
-  - `package`: filter by package ID
-  - `fhirVersion`: filter by FHIR version
-  - `limit`: max results (default: 50)
-  - `offset`: pagination offset
-- Search across:
-  - Resource names
-  - Resource titles
-  - Resource descriptions
-  - Canonical URLs
-- Return ranked results with match highlights
+## Implemented Endpoints
 
-### R2: Extension Search
-**GET `/api/search/extensions`**
-- Query parameters:
-  - `q`: search query
-  - `context`: filter by context type (Resource, Element, etc.)
-  - `contextPath`: filter by context path (e.g., "Patient")
-- Search extension definitions
-- Check context rules for compatibility
-- Return extensions with context metadata
+| Endpoint | Status | Notes |
+|----------|--------|-------|
+| `GET /api/search/resources` | Done | Generic resource search with type/package/fhirVersion filters, facets |
+| `GET /api/search/extensions` | Done | Extension search with context/contextPath filtering |
+| `GET /api/search/valuesets` | Done | ValueSet search with system filtering |
+| `GET /api/search/profiles` | Done | NEW: Profile search with baseType/derivation filters |
+| `GET /api/search/elements` | Done | NEW: Element search within a profile |
 
-### R3: ValueSet Search
-**GET `/api/search/valuesets`**
-- Query parameters:
-  - `q`: search query
-  - `system`: filter by code system
-  - `expansion`: include expansion (true/false)
-- Search ValueSet definitions
-- Optionally include expansion
-- Cache expansions for performance
+### Implementation Details
+- Location: `src/api/search_api.rs`, `src/api/packages_dto.rs`
+- Uses `CanonicalManager.search()` with `SearchQueryBuilder`
+- All endpoints return `SearchResponseWithFacets` with facet counts
 
-### R4: Profile Search
-**GET `/api/search/profiles`**
-- Query parameters:
-  - `q`: search query
-  - `baseType`: filter by base resource type
-  - `derivation`: filter by derivation type
-- Search profile definitions
-- Show base type and derivation chain
-- Include profile snapshot summary
+## Completed Requirements
 
-### R5: Element Path Search
-**GET `/api/search/elements`**
-- Query parameters:
-  - `profileId`: search within specific profile
-  - `q`: element path or description search
-- Search element paths within a profile
-- Fuzzy matching for element paths
-- Return element tree position
+### R1: Enhanced Extension Search ✅
+- [x] Add `context` filter (Resource, Element, DataType)
+- [x] Add `contextPath` filter (e.g., "Patient", "Observation.value")
+- [x] Check extension context rules for compatibility
+- [x] Return context metadata in results
 
-### R6: Search Indexing
-- Build search index from loaded packages
-- Update index when packages are added/removed
-- Support incremental index updates
-- Efficient prefix and fuzzy matching
+### R2: Enhanced ValueSet Search ✅
+- [x] Add `system` filter for code system URL
+- [x] Filters by compose.include and expansion.contains
 
-### R7: Search Result Format
+### R3: Profile Search ✅
+- [x] `GET /api/search/profiles` endpoint
+- [x] Query parameters: `q`, `baseType`, `derivation`, `package[]`, `fhirVersion`
+- [x] Filters StructureDefinitions with kind=resource and non-null derivation
+- [x] Returns base type and derivation info
+
+### R4: Element Path Search ✅
+- [x] `GET /api/search/elements` endpoint
+- [x] Query parameters: `profileId`, `q`, `limit`
+- [x] Search element paths within a profile
+- [x] Fuzzy matching for element paths
+- [x] Returns element tree info (path, types, cardinality)
+
+### R5: Search Result Enhancements ✅
+- [x] Add `fhirVersion` filter to all endpoints
+- [x] Add faceted search results (counts by type/package)
+- [x] Score included in all results
+
+### R6: Performance
+- [x] Delegates to canonical manager's SQLite FTS (fast by design)
+- [ ] Verify <200ms response time (needs runtime testing)
+
+## Query Parameter Reference
+
+### Common Parameters (all endpoints)
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `q` | string | Text search query |
+| `package[]` | array | Filter by package name(s) |
+| `fhir_version` | string | Filter by FHIR version (prefix match) |
+| `limit` | int | Max results (default 50) |
+| `offset` | int | Pagination offset |
+
+### Extension-specific
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `context` | string | Context type filter (resource, element, datatype) |
+| `context_path` | string | Context expression filter (e.g., "Patient") |
+
+### ValueSet-specific
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `system` | string | Code system URL filter |
+
+### Profile-specific
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `base_type` | string | Base resource type (Patient, Observation, etc.) |
+| `derivation` | string | Derivation type (constraint, specialization) |
+
+### Element-specific
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `profile_id` | string | Profile URL or ID to search within (required) |
+
+## Response Format
+
+All endpoints return:
 ```json
 {
-  "results": [
-    {
-      "resourceType": "StructureDefinition",
-      "id": "...",
-      "url": "...",
-      "name": "...",
-      "title": "...",
-      "description": "...",
-      "package": {
-        "id": "hl7.fhir.us.core",
-        "version": "5.0.1"
-      },
-      "score": 0.95,
-      "highlights": [
-        { "field": "description", "snippet": "...match..." }
-      ]
-    }
-  ],
-  "total": 150,
-  "limit": 50,
-  "offset": 0
+  "results": [...],
+  "totalCount": 150,
+  "facets": {
+    "resourceTypes": { "StructureDefinition": 120, "ValueSet": 30 },
+    "packages": { "hl7.fhir.us.core": 100, "hl7.fhir.r4.core": 50 }
+  }
 }
 ```
 
-### R8: Performance
-- Search results return in <200ms
-- Index updates are incremental
-- Cache frequent queries
-- Limit result set size
+## Implementation Files
 
-## Acceptance Criteria
-
-- [ ] Resource search finds resources by name/description
-- [ ] Extension search filters by context compatibility
-- [ ] ValueSet search works efficiently
-- [ ] Profile search filters by base type
-- [ ] Element path search finds elements within profiles
-- [ ] Search ranking is relevant
-- [ ] Fuzzy matching works for typos
-- [ ] Pagination works correctly
-- [ ] Search index updates incrementally
-- [ ] Search performance <200ms for most queries
-- [ ] Result highlights show match context
-- [ ] Documentation for search API
+- `src/api/search_api.rs` - All search endpoint handlers
+- `src/api/packages_dto.rs` - DTOs for queries and responses
 
 ## Dependencies
-- **Backend 10**: Package Management (for resource access)
 
-## Related Files
-- `crates/server/src/routes/search.rs` (new)
-- `crates/profile-builder/src/search/mod.rs` (new)
-- `crates/profile-builder/src/search/indexer.rs` (new)
-- `crates/profile-builder/src/search/query.rs` (new)
-- `crates/profile-builder/src/search/ranking.rs` (new)
+- **Backend 10**: Package Management (completed)
 
-## Priority
-🟡 High - Important for usability
+## Additional Changes
 
-## Estimated Complexity
-Medium - 2 weeks
+### Proxy Removal
+Removed backend proxy to Vite dev server:
+- `src/server.rs` - Removed `dev_proxy_handler`, `proxy_request`
+- `src/config.rs` - Removed `dev_mode`, `vite_dev_url` config fields
+- `Cargo.toml` - Removed `reqwest` dependency
+
+UI now uses Vite's built-in proxy (`web/vite.config.ts`) to forward `/api` requests to the backend.
+
+
+
