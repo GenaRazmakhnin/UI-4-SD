@@ -4,6 +4,7 @@
 //! to ensure byte-identical output for unchanged data.
 
 use serde_json::{Map, Value};
+use std::collections::{HashMap, HashSet};
 
 use crate::ir::{ElementNode, ProfiledResource};
 
@@ -185,6 +186,180 @@ pub fn deep_merge_objects(target: &mut Map<String, Value>, source: &Map<String, 
                 // Don't override existing non-object values
             }
         }
+    }
+}
+
+/// Merge original SD fields into an exported SD without overriding edits.
+pub fn merge_original_sd_fields(exported: &mut Value, original: &Value) {
+    let (exported_obj, original_obj) = match (exported.as_object_mut(), original.as_object()) {
+        (Some(e), Some(o)) => (e, o),
+        _ => return,
+    };
+
+    for (key, value) in original_obj {
+        if key == "snapshot" || key == "differential" {
+            continue;
+        }
+        match exported_obj.get_mut(key) {
+            Some(target_value) => merge_value(target_value, value),
+            None => {
+                exported_obj.insert(key.clone(), value.clone());
+            }
+        }
+    }
+
+    merge_element_section(exported_obj, original_obj, "snapshot");
+    merge_element_section(exported_obj, original_obj, "differential");
+}
+
+fn merge_element_section(
+    exported: &mut Map<String, Value>,
+    original: &Map<String, Value>,
+    section: &str,
+) {
+    let Some(exported_section) = exported.get_mut(section).and_then(Value::as_object_mut) else {
+        return;
+    };
+    let Some(original_section) = original.get(section).and_then(Value::as_object) else {
+        return;
+    };
+    let Some(exported_elements) = exported_section
+        .get_mut("element")
+        .and_then(Value::as_array_mut)
+    else {
+        return;
+    };
+    let Some(original_elements) = original_section
+        .get("element")
+        .and_then(Value::as_array)
+    else {
+        return;
+    };
+
+    merge_element_arrays(exported_elements, original_elements);
+}
+
+fn merge_element_arrays(exported: &mut Vec<Value>, original: &[Value]) {
+    let mut original_by_id = HashMap::new();
+    let mut original_by_path = HashMap::new();
+
+    for value in original {
+        let Some(obj) = value.as_object() else { continue };
+        if let Some(id) = obj.get("id").and_then(Value::as_str) {
+            original_by_id.insert(id.to_string(), obj);
+        }
+        if let Some(path_key) = element_path_key(obj) {
+            original_by_path.insert(path_key, obj);
+        }
+    }
+
+    for value in exported.iter_mut() {
+        let Some(target_obj) = value.as_object_mut() else { continue };
+        let source_obj = element_id_key(target_obj)
+            .and_then(|key| original_by_id.get(&key).copied())
+            .or_else(|| {
+                element_path_key(target_obj)
+                    .and_then(|key| original_by_path.get(&key).copied())
+            });
+        if let Some(source_obj) = source_obj {
+            merge_element_object(target_obj, source_obj);
+        }
+    }
+}
+
+fn element_id_key(obj: &Map<String, Value>) -> Option<String> {
+    obj.get("id").and_then(Value::as_str).map(|s| s.to_string())
+}
+
+fn element_path_key(obj: &Map<String, Value>) -> Option<String> {
+    let path = obj.get("path").and_then(Value::as_str)?;
+    if let Some(slice) = obj.get("sliceName").and_then(Value::as_str) {
+        return Some(format!("{}:{}", path, slice));
+    }
+    Some(path.to_string())
+}
+
+fn merge_element_object(target: &mut Map<String, Value>, source: &Map<String, Value>) {
+    for (key, value) in source {
+        match target.get_mut(key) {
+            None => {
+                target.insert(key.clone(), value.clone());
+            }
+            Some(target_value) => match (target_value, value) {
+                (Value::Object(target_obj), Value::Object(source_obj)) => {
+                    merge_objects(target_obj, source_obj);
+                }
+                (Value::Array(target_arr), Value::Array(source_arr)) => {
+                    merge_array_field(key, target_arr, source_arr);
+                }
+                _ => {}
+            },
+        }
+    }
+}
+
+fn merge_array_field(field: &str, target: &mut Vec<Value>, source: &[Value]) {
+    match field {
+        "constraint" => merge_array_objects_by_key(target, source, "key"),
+        "mapping" => merge_array_objects_by_key(target, source, "identity"),
+        "type" => merge_array_objects_by_key(target, source, "code"),
+        "example" => merge_array_objects_by_key(target, source, "label"),
+        _ => {
+            if target.is_empty() {
+                *target = source.to_vec();
+            }
+        }
+    }
+}
+
+fn merge_array_objects_by_key(target: &mut Vec<Value>, source: &[Value], key: &str) {
+    let mut source_map: HashMap<String, &Map<String, Value>> = HashMap::new();
+    for value in source {
+        let Some(obj) = value.as_object() else { continue };
+        let Some(id) = obj.get(key).and_then(Value::as_str) else { continue };
+        source_map.insert(id.to_string(), obj);
+    }
+
+    let mut seen = HashSet::new();
+    for value in target.iter_mut() {
+        let Some(target_obj) = value.as_object_mut() else { continue };
+        let Some(id) = target_obj.get(key).and_then(Value::as_str) else { continue };
+        let id_string = id.to_string();
+        if let Some(source_obj) = source_map.get(&id_string) {
+            merge_objects(target_obj, source_obj);
+            seen.insert(id_string);
+        }
+    }
+
+    for (id, source_obj) in source_map {
+        if !seen.contains(&id) {
+            target.push(Value::Object(source_obj.clone()));
+        }
+    }
+}
+
+fn merge_objects(target: &mut Map<String, Value>, source: &Map<String, Value>) {
+    for (key, value) in source {
+        match target.get_mut(key) {
+            Some(target_value) => merge_value(target_value, value),
+            None => {
+                target.insert(key.clone(), value.clone());
+            }
+        }
+    }
+}
+
+fn merge_value(target: &mut Value, source: &Value) {
+    match (target, source) {
+        (Value::Object(target_obj), Value::Object(source_obj)) => {
+            merge_objects(target_obj, source_obj);
+        }
+        (Value::Array(target_arr), Value::Array(source_arr)) => {
+            if target_arr.is_empty() {
+                *target_arr = source_arr.clone();
+            }
+        }
+        _ => {}
     }
 }
 

@@ -16,15 +16,17 @@ use axum::{
 };
 use sha2::{Digest, Sha256};
 use std::io::Write;
+use std::path::Path as FsPath;
 use zip::write::SimpleFileOptions;
 
 use crate::decompiler::{decompile_sd_value_to_fsh, DecompilerError};
-use crate::export::{ExportConfig, StructureDefinitionExporter};
+use crate::export::{merge_original_sd_fields, ExportConfig, StructureDefinitionExporter};
 use crate::ir::ProfileDocument;
 use crate::state::AppState;
 
 use super::dto::{ApiResponse, Diagnostic, DiagnosticSeverity};
 use super::export_dto::*;
+use super::profile_merge::hydrate_profile_document;
 use super::profiles::{ErrorResponse, ProfilePath, ProjectPath};
 use super::storage::{ProfileStorage, StorageError};
 
@@ -36,6 +38,7 @@ pub fn export_routes() -> Router<AppState> {
             "/{profileId}/export/sd",
             get(export_sd).head(export_sd_headers),
         )
+        .route("/{profileId}/export/sd/base", get(export_base_sd))
         .route(
             "/{profileId}/export/fsh",
             get(export_fsh).head(export_fsh_headers),
@@ -75,6 +78,18 @@ async fn export_sd(
         }
         Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
     };
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
+    };
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
+    };
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
+    };
 
     // Validate before export
     let validation = validate_for_export(&doc);
@@ -104,12 +119,13 @@ async fn export_sd(
 
     // Export to JSON
     let mut exporter = StructureDefinitionExporter::with_config(config);
-    let json_value = match exporter.export_value(&doc).await {
+    let mut json_value = match exporter.export_value(&doc).await {
         Ok(v) => v,
         Err(e) => {
             return ErrorResponse::internal_error(format!("Export failed: {}", e)).into_response()
         }
     };
+    merge_original_sd_for_export(&project_dir, &doc, &mut json_value).await;
 
     // Serialize for content and ETag
     let json_string = if query.pretty {
@@ -188,6 +204,84 @@ async fn export_sd(
     resp
 }
 
+/// GET /api/projects/:projectId/profiles/:profileId/export/sd/base
+///
+/// Export the base StructureDefinition JSON.
+async fn export_base_sd(
+    State(state): State<AppState>,
+    Path(params): Path<ProfilePath>,
+) -> impl IntoResponse {
+    let project_dir = state.project_path(&params.project_id);
+    let storage = ProfileStorage::new(&project_dir);
+
+    let doc = match storage.load_profile(&params.profile_id).await {
+        Ok(d) => d,
+        Err(StorageError::NotFound(_)) => {
+            return ErrorResponse::not_found("Profile", &params.profile_id).into_response()
+        }
+        Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
+    };
+
+    let base_url = doc.resource.base.url.clone();
+    let base_name = doc
+        .resource
+        .base
+        .name
+        .clone()
+        .or_else(|| base_url.rsplit('/').next().map(String::from))
+        .unwrap_or_else(|| "Base".to_string());
+
+    let canonical_manager = match state.canonical_manager().await {
+        Ok(mgr) => mgr.clone(),
+        Err(e) => {
+            return ErrorResponse::internal_error(format!("Canonical manager error: {}", e))
+                .into_response()
+        }
+    };
+    let resolver = crate::base::BaseResolver::new(canonical_manager);
+
+    let json_value = match resolver.load_base_sd_json(&base_url).await {
+        Ok(v) => v,
+        Err(e) => {
+            return ErrorResponse::internal_error(format!("Failed to load base SD: {}", e))
+                .into_response()
+        }
+    };
+
+    let json_string = serde_json::to_string(&json_value).unwrap_or_default();
+    let etag = calculate_etag(&json_string);
+
+    let metadata = ExportMetadata {
+        resource_id: base_name.clone(),
+        name: base_name.clone(),
+        url: base_url,
+        fhir_version: doc.resource.fhir_version.as_str().to_string(),
+        filename: format!("{}.json", base_name),
+        content_type: "application/fhir+json".to_string(),
+        etag: etag.clone(),
+        persisted_path: None,
+    };
+
+    let response = SdExportResponse {
+        data: json_value,
+        metadata,
+        diagnostics: Vec::new(),
+    };
+
+    let mut resp = Json(ApiResponse::ok(response)).into_response();
+    let headers = resp.headers_mut();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/fhir+json"),
+    );
+    headers.insert(
+        header::ETAG,
+        HeaderValue::from_str(&format!("\"{}\"", etag)).unwrap(),
+    );
+
+    resp
+}
+
 /// HEAD /api/projects/:projectId/profiles/:profileId/export/sd
 ///
 /// Get headers for SD export (for caching checks).
@@ -204,6 +298,18 @@ async fn export_sd_headers(
         Ok(d) => d,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
     };
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
 
     // Build minimal export to calculate ETag
     let config = match query.format {
@@ -218,9 +324,16 @@ async fn export_sd_headers(
     };
 
     let mut exporter = StructureDefinitionExporter::with_config(config);
-    let json_string = match exporter.export(&doc).await {
-        Ok(s) => s,
+    let mut json_value = match exporter.export_value(&doc).await {
+        Ok(v) => v,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    merge_original_sd_for_export(&project_dir, &doc, &mut json_value).await;
+
+    let json_string = if query.pretty {
+        serde_json::to_string_pretty(&json_value).unwrap_or_default()
+    } else {
+        serde_json::to_string(&json_value).unwrap_or_default()
     };
 
     let etag = calculate_etag(&json_string);
@@ -263,6 +376,12 @@ async fn export_fsh(
         Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
     };
 
+    // Hydrate the profile (merge base + differential into root tree)
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
+    };
+
     // Validate before export
     let validation = validate_for_export(&doc);
     if !validation.can_export(query.force) {
@@ -278,7 +397,7 @@ async fn export_fsh(
     }
 
     // Export to SD JSON, then decompile to FSH using maki-decompiler
-    let fsh_content = match generate_fsh_via_decompiler(&doc).await {
+    let fsh_content = match generate_fsh_via_decompiler(&project_dir, &doc).await {
         Ok(fsh) => fsh,
         Err(e) => {
             return ErrorResponse::internal_error(format!("FSH decompilation failed: {}", e))
@@ -372,7 +491,13 @@ async fn export_fsh_headers(
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
     };
 
-    let fsh_content = match generate_fsh_via_decompiler(&doc).await {
+    // Hydrate the profile
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    let fsh_content = match generate_fsh_via_decompiler(&project_dir, &doc).await {
         Ok(fsh) => fsh,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
@@ -433,20 +558,22 @@ async fn bulk_export(
 
     match query.structure {
         ExportStructure::Flat => {
-            bulk_export_flat(&params.project_id, profiles, &query).await
+            bulk_export_flat(&state, &params.project_id, profiles, &query).await
         }
         ExportStructure::Packaged => {
-            bulk_export_packaged(&params.project_id, profiles, &query).await
+            bulk_export_packaged(&state, &params.project_id, profiles, &query).await
         }
     }
 }
 
 /// Export profiles as flat structure (JSON response).
 async fn bulk_export_flat(
+    state: &AppState,
     project_id: &str,
     profiles: Vec<ProfileDocument>,
     query: &BulkExportQuery,
 ) -> Response<Body> {
+    let project_dir = state.project_path(project_id);
     let mut files = Vec::new();
     let mut diagnostics = Vec::new();
     let mut success_count = 0u32;
@@ -454,6 +581,25 @@ async fn bulk_export_flat(
     let total = profiles.len() as u32;
 
     for doc in profiles {
+        let resource_id = doc.metadata.id.clone();
+        let resource_name = doc.metadata.name.clone();
+        let doc = match hydrate_profile_document(state, doc).await {
+            Ok(d) => d,
+            Err(e) => {
+                failed_count += 1;
+                diagnostics.push(ResourceDiagnostic {
+                    resource_id,
+                    name: resource_name,
+                    diagnostics: vec![Diagnostic {
+                        severity: DiagnosticSeverity::Error,
+                        code: "HYDRATION_FAILED".to_string(),
+                        message: "Failed to hydrate profile for export".to_string(),
+                        path: None,
+                    }],
+                });
+                continue;
+            }
+        };
         let validation = validate_for_export(&doc);
         let resource_diag = ResourceDiagnostic {
             resource_id: doc.metadata.id.clone(),
@@ -476,8 +622,14 @@ async fn bulk_export_flat(
             };
             let mut exporter = StructureDefinitionExporter::with_config(config);
 
-            match exporter.export(&doc).await {
-                Ok(content) => {
+            match exporter.export_value(&doc).await {
+                Ok(mut value) => {
+                    merge_original_sd_for_export(&project_dir, &doc, &mut value).await;
+                    let content = if query.pretty {
+                        serde_json::to_string_pretty(&value).unwrap_or_default()
+                    } else {
+                        serde_json::to_string(&value).unwrap_or_default()
+                    };
                     files.push(ExportedFile {
                         resource_id: doc.metadata.id.clone(),
                         name: doc.metadata.name.clone(),
@@ -504,7 +656,7 @@ async fn bulk_export_flat(
 
         // Export FSH if requested
         if matches!(query.format, BulkExportFormat::Fsh | BulkExportFormat::Both) {
-            match generate_fsh_via_decompiler(&doc).await {
+            match generate_fsh_via_decompiler(&project_dir, &doc).await {
                 Ok(fsh_content) => {
                     files.push(ExportedFile {
                         resource_id: doc.metadata.id.clone(),
@@ -560,10 +712,12 @@ async fn bulk_export_flat(
 
 /// Export profiles as packaged tarball with IG scaffold.
 async fn bulk_export_packaged(
+    state: &AppState,
     project_id: &str,
     profiles: Vec<ProfileDocument>,
     query: &BulkExportQuery,
 ) -> Response<Body> {
+    let project_dir = state.project_path(project_id);
     // Create in-memory ZIP file
     let mut zip_buffer = Vec::new();
     {
@@ -572,8 +726,18 @@ async fn bulk_export_packaged(
             .compression_method(zip::CompressionMethod::Deflated)
             .unix_permissions(0o644);
 
-        for doc in &profiles {
-            let validation = validate_for_export(doc);
+        let mut hydrated_profiles = Vec::new();
+
+        for doc in profiles {
+            let doc = match hydrate_profile_document(state, doc).await {
+                Ok(d) => d,
+                Err(_) => {
+                    tracing::warn!("Failed to hydrate profile during packaged export");
+                    continue;
+                }
+            };
+            hydrated_profiles.push(doc.clone());
+            let validation = validate_for_export(&doc);
             if !validation.can_export(true) {
                 continue;
             }
@@ -587,7 +751,13 @@ async fn bulk_export_packaged(
                 };
                 let mut exporter = StructureDefinitionExporter::with_config(config);
 
-                if let Ok(content) = exporter.export(doc).await {
+                if let Ok(mut value) = exporter.export_value(&doc).await {
+                    merge_original_sd_for_export(&project_dir, &doc, &mut value).await;
+                    let content = if query.pretty {
+                        serde_json::to_string_pretty(&value).unwrap_or_default()
+                    } else {
+                        serde_json::to_string(&value).unwrap_or_default()
+                    };
                     let path = format!(
                         "input/resources/StructureDefinition-{}.json",
                         doc.metadata.name
@@ -605,7 +775,7 @@ async fn bulk_export_packaged(
 
             // Export FSH if requested
             if matches!(query.format, BulkExportFormat::Fsh | BulkExportFormat::Both) {
-                match generate_fsh_via_decompiler(doc).await {
+                match generate_fsh_via_decompiler(&project_dir, &doc).await {
                     Ok(fsh_content) => {
                         let path = format!("input/fsh/profiles/{}.fsh", doc.metadata.name);
                         if let Err(e) = zip.start_file(&path, options) {
@@ -625,7 +795,7 @@ async fn bulk_export_packaged(
         }
 
         // Add IG scaffold files
-        let ig_json = generate_ig_scaffold(project_id, &profiles);
+        let ig_json = generate_ig_scaffold(project_id, &hydrated_profiles);
         if zip.start_file("ig.ini", options).is_ok() {
             let ig_ini = format!(
                 "[IG]\nig = input/ImplementationGuide-{}.json\ntemplate = fhir.base.template",
@@ -641,7 +811,7 @@ async fn bulk_export_packaged(
         // Add sushi-config.yaml for FSH builds
         if matches!(query.format, BulkExportFormat::Fsh | BulkExportFormat::Both) {
             if zip.start_file("sushi-config.yaml", options).is_ok() {
-                let sushi_config = generate_sushi_config(project_id, &profiles);
+                let sushi_config = generate_sushi_config(project_id, &hydrated_profiles);
                 let _ = zip.write_all(sushi_config.as_bytes());
             }
         }
@@ -692,8 +862,12 @@ async fn preview(
             let config = ExportConfig::default().pretty();
             let mut exporter = StructureDefinitionExporter::with_config(config);
 
-            match exporter.export(&doc).await {
-                Ok(json) => (json, "json"),
+            match exporter.export_value(&doc).await {
+                Ok(mut value) => {
+                    merge_original_sd_for_export(&project_dir, &doc, &mut value).await;
+                    let json = serde_json::to_string_pretty(&value).unwrap_or_default();
+                    (json, "json")
+                }
                 Err(e) => {
                     return ErrorResponse::internal_error(format!("Export failed: {}", e))
                         .into_response()
@@ -701,7 +875,7 @@ async fn preview(
             }
         }
         PreviewFormat::Fsh => {
-            let fsh = match generate_fsh_via_decompiler(&doc).await {
+            let fsh = match generate_fsh_via_decompiler(&project_dir, &doc).await {
                 Ok(fsh) => fsh,
                 Err(e) => {
                     return ErrorResponse::internal_error(format!("FSH decompilation failed: {}", e))
@@ -730,6 +904,30 @@ async fn preview(
 }
 
 // === Helper Functions ===
+
+async fn merge_original_sd_for_export(
+    project_dir: &FsPath,
+    doc: &ProfileDocument,
+    sd_value: &mut serde_json::Value,
+) {
+    let sd_dir = project_dir.join("SD").join("StructureDefinition");
+    let mut paths = Vec::new();
+    paths.push(sd_dir.join(format!("{}.json", doc.metadata.name)));
+    if doc.metadata.id != doc.metadata.name {
+        paths.push(sd_dir.join(format!("{}.json", doc.metadata.id)));
+    }
+
+    for path in paths {
+        let Ok(content) = tokio::fs::read_to_string(&path).await else {
+            continue;
+        };
+        let Ok(original) = serde_json::from_str::<serde_json::Value>(&content) else {
+            continue;
+        };
+        merge_original_sd_fields(sd_value, &original);
+        break;
+    }
+}
 
 /// Validate a profile document before export.
 fn validate_for_export(doc: &ProfileDocument) -> ValidationResult {
@@ -848,15 +1046,26 @@ fn calculate_etag(content: &str) -> String {
 ///
 /// This is the preferred method as it produces high-quality FSH output
 /// by first exporting to SD JSON, then decompiling using maki-decompiler.
-async fn generate_fsh_via_decompiler(doc: &ProfileDocument) -> Result<String, DecompilerError> {
-    // First export to SD JSON
-    let config = ExportConfig::default();
+///
+/// We use `differential_only()` config because maki-decompiler reads from
+/// the differential section to determine which FSH rules to generate.
+/// This ensures FSH output contains only modified elements, not the full
+/// snapshot. Slicing is handled by maki-decompiler's ContainsExtractor
+/// which generates proper `contains` syntax.
+async fn generate_fsh_via_decompiler(
+    project_dir: &FsPath,
+    doc: &ProfileDocument,
+) -> Result<String, DecompilerError> {
+    // Export with differential-only to generate minimal FSH
+    // maki-decompiler reads from sd.differential to extract rules
+    let config = ExportConfig::differential_only();
     let mut exporter = StructureDefinitionExporter::with_config(config);
 
-    let sd_value = exporter
+    let mut sd_value = exporter
         .export_value(doc)
         .await
         .map_err(|e| DecompilerError::ProcessFailed(format!("SD export failed: {}", e)))?;
+    merge_original_sd_for_export(project_dir, doc, &mut sd_value).await;
 
     // Use maki-decompiler to convert SD to FSH
     decompile_sd_value_to_fsh(&sd_value, doc.resource.fhir_version).await

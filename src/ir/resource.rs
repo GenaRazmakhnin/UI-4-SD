@@ -3,10 +3,17 @@
 //! This module defines [`ProfiledResource`], the IR representation of a
 //! profiled FHIR resource. It contains the element tree and metadata
 //! needed for editing and export.
+//!
+//! # Storage Format
+//!
+//! The IR uses a differential-based storage format where only modified
+//! elements are stored. The full element tree is computed at load time
+//! by merging the differential with the base definition.
 
 use serde::{Deserialize, Serialize};
 
 use super::element::ElementNode;
+use crate::merge::DifferentialElement;
 
 /// FHIR version identifier.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -141,8 +148,14 @@ impl BaseDefinition {
 /// IR representation of a profiled FHIR resource.
 ///
 /// This is the main editable representation of a FHIR profile's resource
-/// constraints. It contains the element tree with all modifications from
-/// the base resource.
+/// constraints. It uses a differential-based storage format where only
+/// modified elements are stored in `differential`. The full element tree
+/// (`root`) is computed at load time by merging with the base definition.
+///
+/// # Storage vs. Runtime
+///
+/// - **Storage**: Only `differential` is persisted (modified elements)
+/// - **Runtime**: `root` is computed by merging base + differential
 ///
 /// # Example
 ///
@@ -180,7 +193,18 @@ pub struct ProfiledResource {
     pub kind: StructureKind,
 
     /// Root element node (represents the resource type).
+    ///
+    /// This is the merged view of base + differential, computed at load time.
+    /// For storage, use `differential` which contains only modified elements.
+    #[serde(default, skip_serializing_if = "ElementNode::is_empty")]
     pub root: ElementNode,
+
+    /// Differential elements (only modified constraints from base).
+    ///
+    /// This is the primary storage format. Only elements that differ from
+    /// the base definition are stored here.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub differential: Vec<DifferentialElement>,
 
     /// Extension definitions included in this profile.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -214,9 +238,31 @@ impl ProfiledResource {
             base,
             kind: StructureKind::Resource,
             root: ElementNode::new(root_path),
+            differential: Vec::new(),
             extensions: Vec::new(),
             unknown_fields: serde_json::Map::new(),
         }
+    }
+
+    /// Set the differential elements.
+    #[must_use]
+    pub fn with_differential(mut self, differential: Vec<DifferentialElement>) -> Self {
+        self.differential = differential;
+        self
+    }
+
+    /// Extract differential elements from the current element tree.
+    ///
+    /// This collects all modified elements from `root` and stores them
+    /// in `differential` for storage.
+    pub fn extract_differential(&mut self) {
+        self.differential = crate::merge::extract_differential(&self.root);
+    }
+
+    /// Check if the profile has a populated differential.
+    #[must_use]
+    pub fn has_differential(&self) -> bool {
+        !self.differential.is_empty()
     }
 
     /// Set the version.

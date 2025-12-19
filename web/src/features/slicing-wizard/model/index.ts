@@ -1,5 +1,10 @@
 import { api } from '@shared/api';
-import type { ElementNode, SlicingDiscriminator, SlicingRules } from '@shared/types';
+import {
+  type ElementNode,
+  type SlicingDiscriminator,
+  type SlicingRules,
+  formatMaxCardinality,
+} from '@shared/types';
 import { $selectedElement } from '@widgets/element-tree';
 import { createEffect, createEvent, createStore, sample } from 'effector';
 
@@ -112,10 +117,26 @@ $wizardOpen.on(wizardOpened, () => true).on(wizardClosed, () => false);
 
 sample({
   clock: wizardOpened,
-  fn: ({ element }) => ({
-    ...initialState,
-    elementPath: element.path,
-  }),
+  fn: ({ element }) => {
+    const slices = element.children
+      .filter((child) => child.sliceName)
+      .map((child) => ({
+        name: child.sliceName as string,
+        min: child.min ?? 0,
+        max: formatMaxCardinality(child.max),
+        description: child.short ?? undefined,
+      }));
+
+    return {
+      ...initialState,
+      elementPath: element.path,
+      discriminators: element.slicing?.discriminator ?? [],
+      rules: element.slicing?.rules ?? initialState.rules,
+      ordered: element.slicing?.ordered ?? initialState.ordered,
+      description: element.slicing?.description ?? initialState.description,
+      slices,
+    };
+  },
   target: $wizardState,
 });
 

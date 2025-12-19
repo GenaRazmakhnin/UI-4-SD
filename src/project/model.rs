@@ -276,11 +276,22 @@ pub enum SourceFormat {
 #[serde(rename_all = "camelCase")]
 pub struct ProjectIndex {
     /// Version of the index format.
+    #[serde(default = "default_project_index_version")]
     pub version: u32,
     /// Last modified timestamp.
+    #[serde(default = "default_project_index_modified_at")]
     pub modified_at: DateTime<Utc>,
     /// Resources in the project.
+    #[serde(default)]
     pub resources: HashMap<String, ProjectResource>,
+}
+
+fn default_project_index_version() -> u32 {
+    1
+}
+
+fn default_project_index_modified_at() -> DateTime<Utc> {
+    Utc::now()
 }
 
 impl Default for ProjectIndex {

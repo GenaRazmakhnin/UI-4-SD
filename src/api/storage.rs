@@ -69,11 +69,22 @@ impl Default for ProjectConfig {
 #[serde(rename_all = "camelCase")]
 pub struct ProfileIndex {
     /// Version of the index format.
+    #[serde(default = "default_index_version")]
     pub version: u32,
     /// Last modified timestamp.
+    #[serde(default = "default_index_modified_at")]
     pub modified_at: DateTime<Utc>,
     /// List of profile entries.
+    #[serde(default)]
     pub profiles: Vec<ProfileIndexEntry>,
+}
+
+fn default_index_version() -> u32 {
+    1
+}
+
+fn default_index_modified_at() -> DateTime<Utc> {
+    Utc::now()
 }
 
 /// Entry in the profile index.
@@ -276,9 +287,14 @@ impl ProfileStorage {
         // Ensure directories exist
         fs::create_dir_all(self.ir_resources_dir()).await?;
 
-        // Save profile document
+        // Save profile document (persist differential-only IR)
         let path = self.profile_path(&doc.metadata.id);
-        let content = serde_json::to_string_pretty(doc)?;
+        let mut doc_to_save = doc.clone();
+        if doc_to_save.resource.differential.is_empty() && !doc_to_save.resource.root.is_empty() {
+            doc_to_save.resource.extract_differential();
+        }
+        doc_to_save.resource.root = crate::ir::ElementNode::default();
+        let content = serde_json::to_string_pretty(&doc_to_save)?;
 
         // Write atomically
         let temp_path = path.with_extension("json.tmp");

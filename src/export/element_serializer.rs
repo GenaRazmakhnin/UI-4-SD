@@ -5,8 +5,8 @@
 use serde_json::{Map, Value};
 
 use crate::ir::{
-    Binding, BindingStrength, ElementConstraints, ElementNode, ElementSource, FixedValue,
-    Invariant, InvariantSeverity, SliceNode, SlicingDefinition, TypeConstraint,
+    Binding, BindingStrength, DifferentialElement, ElementConstraints, ElementNode, ElementSource,
+    FixedValue, Invariant, InvariantSeverity, SliceNode, SlicingDefinition, TypeConstraint,
 };
 
 use super::deterministic::DeterministicJsonBuilder;
@@ -98,6 +98,35 @@ impl ElementSerializer {
 
         // Merge unknown fields
         builder.merge_unknown(&slice.element.unknown_fields);
+
+        Ok(builder.build_value())
+    }
+
+    /// Serialize a differential element (flat representation).
+    pub fn serialize_differential_element(
+        &self,
+        diff: &DifferentialElement,
+    ) -> ExportResult<Value> {
+        let mut builder = DeterministicJsonBuilder::for_element();
+
+        if let Some(slice_name) = diff.slice_name.as_deref() {
+            let slice_id = format!("{}:{}", diff.path, slice_name);
+            builder.add_string("id", &slice_id);
+            builder.add_string("path", &diff.path);
+            builder.add_string("sliceName", slice_name);
+        } else {
+            let id = diff.element_id.clone().unwrap_or_else(|| diff.path.clone());
+            builder.add_string("id", &id);
+            builder.add_string("path", &diff.path);
+        }
+
+        if let Some(slicing) = &diff.slicing {
+            builder.add_value("slicing", self.serialize_slicing(slicing)?);
+        }
+
+        self.serialize_constraints(&mut builder, &diff.constraints)?;
+
+        builder.merge_unknown(&diff.unknown_fields);
 
         Ok(builder.build_value())
     }

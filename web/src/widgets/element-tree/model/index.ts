@@ -1,5 +1,5 @@
 import { api } from '@shared/api';
-import type { ElementNode } from '@shared/types';
+import type { ElementNode, ElementSource } from '@shared/types';
 import { combine, createEffect, createEvent, createStore, sample } from 'effector';
 import { persist } from 'effector-storage/local';
 
@@ -81,6 +81,23 @@ export const loadProfileFx = createEffect<
 
 // Transform backend ElementNode to frontend format
 function transformElementNode(node: any): ElementNode {
+  const source = normalizeSource(node.source);
+  const slicing = node.slicing ?? node.constraints?.slicing;
+  const baseChildren = (node.children || []).map(transformElementNode);
+  const sliceChildren = node.slices
+    ? Object.values(node.slices).map((slice: any) => {
+        const element = slice?.element ?? {};
+        const transformed = transformElementNode({
+          ...element,
+          source: element.source ?? slice.source,
+        });
+        return {
+          ...transformed,
+          sliceName: slice.name ?? transformed.sliceName,
+        };
+      })
+    : [];
+
   return {
     id: node.id || node.path,
     path: node.path,
@@ -99,12 +116,12 @@ function transformElementNode(node: any): ElementNode {
           description: node.constraints.binding.description,
         }
       : undefined,
-    slicing: node.constraints?.slicing
+    slicing: slicing
       ? {
-          discriminator: node.constraints.slicing.discriminator ?? [],
-          rules: node.constraints.slicing.rules ?? 'open',
-          ordered: node.constraints.slicing.ordered ?? false,
-          description: node.constraints.slicing.description,
+          discriminator: slicing.discriminator ?? [],
+          rules: slicing.rules ?? 'open',
+          ordered: slicing.ordered ?? false,
+          description: slicing.description,
         }
       : undefined,
     mustSupport: node.constraints?.flags?.mustSupport ?? node.mustSupport,
@@ -113,10 +130,19 @@ function transformElementNode(node: any): ElementNode {
     short: node.constraints?.short ?? node.short,
     definition: node.constraints?.definition ?? node.definition,
     comment: node.constraints?.comment ?? node.comment,
-    source: node.source ?? 'Base',
-    isModified: node.source === 'Modified' || node.isModified === true,
-    children: (node.children || []).map(transformElementNode),
+    source,
+    isModified: source !== 'inherited' || node.isModified === true,
+    children: [...baseChildren, ...sliceChildren],
   };
+}
+
+function normalizeSource(source?: string): ElementSource {
+  if (!source) return 'inherited';
+  const lowered = source.toLowerCase();
+  if (lowered === 'modified') return 'modified';
+  if (lowered === 'added') return 'added';
+  if (lowered === 'base' || lowered === 'inherited') return 'inherited';
+  return 'inherited';
 }
 
 // Derived stores
@@ -201,6 +227,15 @@ export const $flattenedElements = combine(
   $expandedPaths,
   $sliceViews,
   (tree, expanded, sliceViews) => {
+    const normalizeSliceChildPath = (path: string): string => {
+      const [base, rest] = path.split(':', 2);
+      if (!rest) return path;
+      const dotIndex = rest.indexOf('.');
+      if (dotIndex === -1) return base;
+      const suffix = rest.slice(dotIndex + 1);
+      return suffix ? `${base}.${suffix}` : base;
+    };
+
     const flatten = (nodes: ElementNode[], depth: number): ElementNode[] => {
       return nodes.flatMap((node) => {
         const isHiddenExtensionContainer =
@@ -227,19 +262,24 @@ export const $flattenedElements = combine(
         let childrenToRender: ElementNode[] = baseChildren;
 
         if (isNonExtensionSlicing && currentView !== 'base') {
-          const byPath = new Map<string, ElementNode>();
-          // Keep order of base children
-          for (const child of baseChildren) {
-            byPath.set(child.path, child);
-          }
+          const basePaths = new Set(baseChildren.map((child) => child.path));
+          const sliceByBasePath = new Map<string, ElementNode>();
+
           for (const child of childrenFromSlice) {
-            byPath.set(child.path, child);
+            const normalized = normalizeSliceChildPath(child.path);
+            if (basePaths.has(normalized)) {
+              sliceByBasePath.set(normalized, child);
+            }
           }
-          childrenToRender = Array.from(byPath.values());
-          // Append slice-only children that were not in base to preserve any ordering from slice
+
+          childrenToRender = baseChildren.map((child) => sliceByBasePath.get(child.path) ?? child);
+
+          const appended = new Set<string>();
           for (const child of childrenFromSlice) {
-            if (!baseChildren.find((b) => b.path === child.path)) {
+            const normalized = normalizeSliceChildPath(child.path);
+            if (!basePaths.has(normalized) && !appended.has(normalized)) {
               childrenToRender.push(child);
+              appended.add(normalized);
             }
           }
         }

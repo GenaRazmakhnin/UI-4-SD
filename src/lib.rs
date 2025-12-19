@@ -32,6 +32,7 @@
 //! ```
 
 pub mod api;
+pub mod base;
 pub mod config;
 pub mod decompiler;
 pub mod engine;
@@ -40,6 +41,7 @@ pub mod export;
 pub mod fsh;
 pub mod import;
 pub mod ir;
+pub mod merge;
 pub mod operations;
 pub mod project;
 pub mod server;

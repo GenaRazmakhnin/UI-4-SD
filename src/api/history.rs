@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::ir::{HistoryState, OperationSummary, ProfileDocument};
 use crate::state::AppState;
 
+use super::profile_merge::hydrate_profile_document;
 use super::profiles::{ErrorResponse, ProfilePath};
 use super::storage::{ProfileStorage, StorageError};
 
@@ -116,6 +117,10 @@ async fn undo(
         .load_profile(&path.profile_id)
         .await
         .map_err(|e: StorageError| -> (axum::http::StatusCode, Json<ErrorResponse>) { e.into() })?;
+    let mut doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(e))),
+    };
 
     // Check if undo is available
     if !doc.history.can_undo() {
@@ -166,6 +171,10 @@ async fn redo(
         .load_profile(&path.profile_id)
         .await
         .map_err(|e: StorageError| -> (axum::http::StatusCode, Json<ErrorResponse>) { e.into() })?;
+    let mut doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(e))),
+    };
 
     // Check if redo is available
     if !doc.history.can_redo() {
@@ -215,6 +224,10 @@ async fn get_history(
         .load_profile(&path.profile_id)
         .await
         .map_err(|e: StorageError| -> (axum::http::StatusCode, Json<ErrorResponse>) { e.into() })?;
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(e))),
+    };
 
     Ok(Json(HistoryResponse {
         state: doc.history.state(),
@@ -238,6 +251,10 @@ async fn goto_history(
         .load_profile(&path.profile_id)
         .await
         .map_err(|e: StorageError| -> (axum::http::StatusCode, Json<ErrorResponse>) { e.into() })?;
+    let mut doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(e))),
+    };
 
     let current_index = doc.history.current_index();
     let target_index = request.index;

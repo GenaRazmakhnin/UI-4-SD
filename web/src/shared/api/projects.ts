@@ -9,13 +9,6 @@ import type {
 } from '@shared/types';
 import { apiClient } from './client';
 
-/** Generic API response wrapper */
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  error?: { code: string; message: string };
-}
-
 /** Profile details response from backend */
 export interface ProfileDetailsResponse {
   documentId: string;
@@ -56,7 +49,7 @@ export interface BackendElementNode {
   id?: string;
   path: string;
   sliceName?: string;
-  source: 'Base' | 'Modified' | 'Added';
+  source: 'inherited' | 'modified' | 'added';
   constraints: ElementConstraints;
   children: BackendElementNode[];
 }
@@ -192,11 +185,11 @@ export const projectsApi = {
     profileId: string,
     updates: UpdateProfileMetadata
   ): Promise<ProfileDetailsResponse> {
-    const response = await apiClient.patch<ApiResponse<ProfileDetailsResponse>>(
+    // apiClient.patch already unwraps the { success, data } wrapper
+    return apiClient.patch<ProfileDetailsResponse>(
       `/api/projects/${projectId}/profiles/${encodeURIComponent(profileId)}/metadata`,
       updates
     );
-    return response.data;
   },
 
   /** Update an element's constraints */
@@ -206,19 +199,19 @@ export const projectsApi = {
     elementPath: string,
     updates: UpdateElementRequest
   ): Promise<UpdateElementResponse> {
-    const response = await apiClient.patch<ApiResponse<UpdateElementResponse>>(
+    // apiClient.patch already unwraps the { success, data } wrapper
+    return apiClient.patch<UpdateElementResponse>(
       `/api/projects/${projectId}/profiles/${encodeURIComponent(profileId)}/elements/${encodeURIComponent(elementPath)}`,
       updates
     );
-    return response.data;
   },
 
   /** Save profile (persists current state) */
   async saveProfile(projectId: string, profileId: string): Promise<ProfileDetailsResponse> {
-    const response = await apiClient.post<ApiResponse<ProfileDetailsResponse>>(
+    // apiClient.post already unwraps the { success, data } wrapper
+    return apiClient.post<ProfileDetailsResponse>(
       `/api/projects/${projectId}/profiles/${encodeURIComponent(profileId)}/save`
     );
-    return response.data;
   },
 };
 

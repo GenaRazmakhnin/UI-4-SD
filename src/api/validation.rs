@@ -23,6 +23,8 @@ use axum::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::profile_merge::hydrate_profile_document;
+use super::profiles::ErrorResponse;
 use super::storage::ProfileStorage;
 use crate::state::{AppState, ValidationConfig};
 use crate::validation::{QuickFixKind, ValidationEngine, ValidationLevel, ValidationResult};
@@ -193,6 +195,36 @@ async fn validate_profile(
             return (
                 StatusCode::NOT_FOUND,
                 Json(serde_json::json!({ "error": format!("{}", e) })),
+            )
+                .into_response();
+        }
+    };
+    let document = match hydrate_profile_document(&state, document).await {
+        Ok(doc) => doc,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(e),
+            )
+                .into_response();
+        }
+    };
+    let document = match hydrate_profile_document(&state, document).await {
+        Ok(doc) => doc,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(e),
+            )
+                .into_response();
+        }
+    };
+    let document = match hydrate_profile_document(&state, document).await {
+        Ok(doc) => doc,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(e),
             )
                 .into_response();
         }
@@ -379,6 +411,21 @@ async fn validate_batch(
     for profile_id in &request.profile_ids {
         match storage.load_profile(profile_id).await {
             Ok(document) => {
+                let document = match hydrate_profile_document(&state, document).await {
+                    Ok(doc) => doc,
+                    Err(e) => {
+                        invalid_count += 1;
+                        results.push(BatchValidationItem {
+                            profile_id: profile_id.clone(),
+                            is_valid: false,
+                            error_count: 0,
+                            warning_count: 0,
+                            error: Some("Hydration failed".to_string()),
+                        });
+                        continue;
+                    }
+                };
+
                 let result = engine.validate(&document, level).await;
 
                 // Cache result
@@ -464,6 +511,16 @@ async fn apply_fix(
             return (
                 StatusCode::NOT_FOUND,
                 Json(serde_json::json!({ "error": format!("{}", e) })),
+            )
+                .into_response();
+        }
+    };
+    let mut document = match hydrate_profile_document(&state, document).await {
+        Ok(doc) => doc,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(e),
             )
                 .into_response();
         }

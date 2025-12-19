@@ -2,14 +2,18 @@ import { Alert, Center, Loader, SegmentedControl, Stack, Text } from '@mantine/c
 import { DiffEditor } from '@monaco-editor/react';
 import { IconAlertCircle, IconGitCompare } from '@tabler/icons-react';
 import { useCallback, useMemo, useState } from 'react';
-import { computeDiff, type DiffLine, useSDJsonPreview } from '../lib/usePreview';
+import {
+  computeDiff,
+  type DiffLine,
+  useBaseSDJsonPreview,
+  useDifferentialSDJsonPreview,
+} from '../lib/usePreview';
 import styles from './PreviewPanel.module.css';
 import { DiffToolbar } from './PreviewToolbar';
 
 export interface DiffViewProps {
   projectId: string;
   profileId: string;
-  baseContent: string;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
 }
@@ -17,17 +21,26 @@ export interface DiffViewProps {
 export function DiffView({
   projectId,
   profileId,
-  baseContent,
   isFullscreen,
   onToggleFullscreen,
 }: DiffViewProps) {
-  const { data, isLoading, error } = useSDJsonPreview(projectId, profileId);
+  const {
+    data: diffData,
+    isLoading: diffLoading,
+    error: diffError,
+  } = useDifferentialSDJsonPreview(projectId, profileId);
+  const {
+    data: baseData,
+    isLoading: baseLoading,
+    error: baseError,
+  } = useBaseSDJsonPreview(projectId, profileId);
   const [diffMode, setDiffMode] = useState<'side-by-side' | 'unified'>('side-by-side');
   const [exportMode, setExportMode] = useState<'differential' | 'snapshot' | 'both'>(
     'differential'
   );
 
-  const modifiedContent = data?.content || '';
+  const modifiedContent = diffData?.content || '';
+  const baseContent = baseData?.content || '';
 
   // Compute diff for unified view
   const diffLines = useMemo(() => {
@@ -51,7 +64,7 @@ export function DiffView({
     URL.revokeObjectURL(url);
   }, [profileId, exportMode, modifiedContent]);
 
-  if (isLoading) {
+  if (diffLoading || baseLoading) {
     return (
       <Center h="100%">
         <Stack align="center" gap="sm">
@@ -64,11 +77,11 @@ export function DiffView({
     );
   }
 
-  if (error) {
+  if (diffError || baseError) {
     return (
       <div className={styles.errorState}>
         <Alert icon={<IconAlertCircle size={16} />} title="Failed to generate diff" color="red">
-          {error.message}
+          {(diffError ?? baseError)?.message}
         </Alert>
       </div>
     );

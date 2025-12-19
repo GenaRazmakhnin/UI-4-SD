@@ -8,9 +8,10 @@ use std::collections::HashMap;
 use serde_json::Value;
 
 use super::error::{ImportError, ImportResult};
+use crate::merge::DifferentialElement;
 use crate::ir::{
     Binding, BindingStrength, Cardinality, ElementConstraints, ElementNode, ElementSource,
-    FixedValue, TypeConstraint,
+    FixedValue, SlicingDefinition, TypeConstraint,
 };
 
 /// Builder for constructing an element tree from FHIR element definitions.
@@ -98,6 +99,69 @@ impl ElementTreeBuilder {
         self.attach_children(&mut root, &mut path_to_children);
 
         Ok(root)
+    }
+
+    /// Build differential elements from element definitions.
+    ///
+    /// This extracts only modified elements from the differential section.
+    pub fn build_differential_elements(
+        &self,
+        elements: &[Value],
+    ) -> ImportResult<Vec<DifferentialElement>> {
+        let mut differential = Vec::new();
+
+        for element in elements {
+            let path = element
+                .get("path")
+                .and_then(Value::as_str)
+                .ok_or_else(|| ImportError::missing_field("element.path"))?;
+
+            let slice_name = element.get("sliceName").and_then(Value::as_str);
+            let element_id = element.get("id").and_then(Value::as_str);
+
+            let mut effective_path = path.to_string();
+            if slice_name.is_none() && !path.contains(':') {
+                if let Some(id) = element_id {
+                    if id.contains(':') {
+                        effective_path = id.to_string();
+                    }
+                }
+            }
+
+            let mut diff = DifferentialElement::new(effective_path);
+
+            // Stable ID for UI
+            if let Some(id) = element_id {
+                diff.element_id = Some(id.to_string());
+            }
+
+            // Slice name if present
+            if let Some(slice_name) = slice_name {
+                diff.slice_name = Some(slice_name.to_string());
+            }
+
+            // Parse constraints and slicing
+            diff.constraints = self.parse_constraints(element)?;
+            diff.slicing = element
+                .get("slicing")
+                .map(|s| self.parse_slicing_definition(s))
+                .transpose()?;
+
+            // Preserve unknown fields
+            if self.preserve_unknown {
+                diff.unknown_fields = self.extract_unknown_fields(element);
+            }
+
+            differential.push(diff);
+        }
+
+        differential.retain(|diff| {
+            diff.has_constraints()
+                || diff.slice_name.is_some()
+                || !diff.unknown_fields.is_empty()
+        });
+
+        Ok(differential)
     }
 
     /// Build a single element node from JSON.
@@ -486,6 +550,57 @@ impl ElementTreeBuilder {
             .collect()
     }
 
+    /// Parse a slicing definition from JSON.
+    fn parse_slicing_definition(&self, slicing: &Value) -> ImportResult<SlicingDefinition> {
+        let discriminators = slicing
+            .get("discriminator")
+            .and_then(Value::as_array)
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|d| {
+                        let disc_type = d.get("type").and_then(Value::as_str)?;
+                        let path = d.get("path").and_then(Value::as_str)?;
+                        let disc_type = match disc_type {
+                            "value" => crate::ir::DiscriminatorType::Value,
+                            "exists" => crate::ir::DiscriminatorType::Exists,
+                            "pattern" => crate::ir::DiscriminatorType::Pattern,
+                            "type" => crate::ir::DiscriminatorType::Type,
+                            "profile" => crate::ir::DiscriminatorType::Profile,
+                            "position" => crate::ir::DiscriminatorType::Position,
+                            _ => return None,
+                        };
+
+                        Some(crate::ir::Discriminator {
+                            discriminator_type: disc_type,
+                            path: path.to_string(),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let description = slicing
+            .get("description")
+            .and_then(Value::as_str)
+            .map(String::from);
+
+        let ordered = slicing.get("ordered").and_then(Value::as_bool).unwrap_or(false);
+
+        let rules = match slicing.get("rules").and_then(Value::as_str) {
+            Some("closed") => crate::ir::SlicingRules::Closed,
+            Some("open") => crate::ir::SlicingRules::Open,
+            Some("openAtEnd") => crate::ir::SlicingRules::OpenAtEnd,
+            _ => crate::ir::SlicingRules::Open,
+        };
+
+        Ok(SlicingDefinition {
+            discriminator: discriminators,
+            description,
+            ordered,
+            rules,
+        })
+    }
+
     /// Get the parent path from an element path.
     fn get_parent_path<'a>(&self, path: &'a str) -> &'a str {
         path.rsplit_once('.').map(|(parent, _)| parent).unwrap_or("")
@@ -660,6 +775,21 @@ mod tests {
         // Patient.birthDate should be inherited
         let birth_date = &root.children[1];
         assert_eq!(birth_date.source, ElementSource::Inherited);
+    }
+
+    #[test]
+    fn test_differential_slice_child_path_from_id() {
+        let differential = vec![serde_json::json!({
+            "id": "Patient.name:Official.use",
+            "path": "Patient.name.use",
+            "min": 1
+        })];
+
+        let builder = ElementTreeBuilder::new();
+        let diffs = builder.build_differential_elements(&differential).unwrap();
+
+        assert_eq!(diffs.len(), 1);
+        assert_eq!(diffs[0].path, "Patient.name:Official.use");
     }
 
     #[test]

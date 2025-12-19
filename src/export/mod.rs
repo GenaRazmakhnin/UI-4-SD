@@ -89,7 +89,9 @@ pub use element_serializer::ElementSerializer;
 pub use error::{
     ExportError, ExportResult, ExportResultWithWarnings, ExportWarning, ExportWarningCode,
 };
-pub use field_preservation::{FieldPreserver, UnknownFieldCollector, UnknownFieldInfo};
+pub use field_preservation::{
+    merge_original_sd_fields, FieldPreserver, UnknownFieldCollector, UnknownFieldInfo,
+};
 pub use sd_exporter::{ExportConfig, StructureDefinitionExporter};
 pub use snapshot_generator::{SnapshotConfig, SnapshotGenerator};
 
@@ -97,8 +99,8 @@ pub use snapshot_generator::{SnapshotConfig, SnapshotGenerator};
 mod tests {
     use super::*;
     use crate::ir::{
-        BaseDefinition, Cardinality, DocumentMetadata, ElementNode, ElementSource,
-        FhirVersion, ProfileDocument, ProfiledResource,
+        BaseDefinition, Cardinality, DifferentialElement, DocumentMetadata, ElementNode,
+        ElementSource, FhirVersion, ProfileDocument, ProfiledResource,
     };
 
     /// Create a test document for round-trip testing.
@@ -146,6 +148,21 @@ mod tests {
         birth_date.constraints.cardinality = Some(Cardinality::optional());
         birth_date.constraints.flags.must_support = true;
         resource.root.add_child(birth_date);
+
+        // Also populate the differential vector for DifferentialStats tests
+        let mut diff_identifier = DifferentialElement::new("Patient.identifier".to_string());
+        diff_identifier.constraints.cardinality = Some(Cardinality::required_unbounded());
+        diff_identifier.constraints.flags.must_support = true;
+        resource.differential.push(diff_identifier);
+
+        let mut diff_name = DifferentialElement::new("Patient.name".to_string());
+        diff_name.constraints.cardinality = Some(Cardinality::required());
+        resource.differential.push(diff_name);
+
+        let mut diff_birth_date = DifferentialElement::new("Patient.birthDate".to_string());
+        diff_birth_date.constraints.cardinality = Some(Cardinality::optional());
+        diff_birth_date.constraints.flags.must_support = true;
+        resource.differential.push(diff_birth_date);
 
         ProfileDocument::new(metadata, resource)
     }

@@ -20,10 +20,9 @@ export type PreviewTab = 'json' | 'fsh' | 'diff' | 'inputIt' | 'schema';
 export interface PreviewPanelProps {
   projectId: string;
   profileId: string;
-  baseContent?: string;
 }
 
-export function PreviewPanel({ projectId, profileId, baseContent = '' }: PreviewPanelProps) {
+export function PreviewPanel({ projectId, profileId }: PreviewPanelProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('json');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -122,7 +121,6 @@ export function PreviewPanel({ projectId, profileId, baseContent = '' }: Preview
           <DiffView
             projectId={projectId}
             profileId={profileId}
-            baseContent={baseContent}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
           />

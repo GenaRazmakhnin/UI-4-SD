@@ -632,7 +632,7 @@ export const mockApi = {
       await simulateDelay(300, 600);
       const content = JSON.parse(fixtures.mockSDExport[profileId] || '{}');
       return {
-        content,
+        data: content,
         metadata: {
           resourceId: profileId,
           name: profileId,
@@ -645,10 +645,27 @@ export const mockApi = {
       };
     },
 
+    async toBaseSD(_projectId: string, profileId: string): Promise<SdExportResponse> {
+      await simulateDelay(200, 400);
+      const content = JSON.parse(fixtures.mockSDExport[profileId] || '{}');
+      return {
+        data: content,
+        metadata: {
+          resourceId: `${profileId}-base`,
+          name: `${profileId}-base`,
+          url: `http://hl7.org/fhir/StructureDefinition/${profileId}`,
+          fhirVersion: '4.0.1',
+          filename: `${profileId}-base.json`,
+          contentType: 'application/fhir+json',
+          etag: 'mock-etag-base',
+        },
+      };
+    },
+
     async toFSH(_projectId: string, profileId: string): Promise<FshExportResponse> {
       await simulateDelay(300, 600);
       return {
-        content: fixtures.mockFSHExport[profileId] || `Profile: ${profileId}\nParent: Patient`,
+        data: fixtures.mockFSHExport[profileId] || `Profile: ${profileId}\nParent: Patient`,
         metadata: {
           resourceId: profileId,
           name: profileId,

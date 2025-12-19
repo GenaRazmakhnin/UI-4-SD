@@ -177,6 +177,16 @@ impl ElementNode {
         }
     }
 
+    /// Check if this is an uninitialized placeholder node.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.path.is_empty()
+            && self.children.is_empty()
+            && self.slices.is_empty()
+            && self.element_id.is_none()
+            && self.unknown_fields.is_empty()
+    }
+
     /// Create a new element node with explicit ID.
     #[must_use]
     pub fn with_id(id: NodeId, path: String) -> Self {
@@ -198,9 +208,15 @@ impl ElementNode {
     /// Get the element's short name (last segment of path).
     #[must_use]
     pub fn short_name(&self) -> &str {
-        self.element_id
-            .as_deref()
-            .unwrap_or_else(|| self.path.rsplit('.').next().unwrap_or(&self.path))
+        if let Some(element_id) = self.element_id.as_deref() {
+            let after_dot = element_id.rsplit('.').next().unwrap_or(element_id);
+            let after_colon = after_dot.rsplit(':').next().unwrap_or(after_dot);
+            if !after_colon.is_empty() {
+                return after_colon;
+            }
+        }
+
+        self.path.rsplit('.').next().unwrap_or(&self.path)
     }
 
     /// Get mutable access to constraints.
@@ -323,6 +339,12 @@ impl ElementNode {
     /// Iterate over all descendant nodes (depth-first).
     pub fn descendants(&self) -> impl Iterator<Item = &ElementNode> {
         ElementIterator::new(self)
+    }
+}
+
+impl Default for ElementNode {
+    fn default() -> Self {
+        Self::new(String::new())
     }
 }
 

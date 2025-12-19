@@ -426,10 +426,18 @@ impl ElementConstraints {
             || !self.types.is_empty()
             || self.short.is_some()
             || self.definition.is_some()
+            || self.comment.is_some()
+            || self.requirements.is_some()
+            || !self.alias.is_empty()
             || self.fixed_value.is_some()
+            || self.default_value.is_some()
+            || self.meaning_when_missing.is_some()
             || self.binding.is_some()
             || self.flags.has_any()
             || !self.invariants.is_empty()
+            || !self.mappings.is_empty()
+            || self.max_length.is_some()
+            || !self.examples.is_empty()
     }
 
     /// Set cardinality.

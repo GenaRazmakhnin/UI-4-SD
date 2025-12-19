@@ -9,6 +9,10 @@ export const previewKeys = {
   all: ['preview'] as const,
   sd: (projectId: string, profileId: string) =>
     [...previewKeys.all, 'sd', projectId, profileId] as const,
+  sdBase: (projectId: string, profileId: string) =>
+    [...previewKeys.all, 'sdBase', projectId, profileId] as const,
+  sdDifferential: (projectId: string, profileId: string) =>
+    [...previewKeys.all, 'sdDiff', projectId, profileId] as const,
   fsh: (projectId: string, profileId: string) =>
     [...previewKeys.all, 'fsh', projectId, profileId] as const,
   inputIt: (projectId: string, profileId: string) =>
@@ -40,6 +44,48 @@ export function useSDJsonPreview(projectId: string, profileId: string) {
     },
     enabled: !!projectId && !!profileId,
     staleTime: 30 * 1000, // 30 seconds - preview should be relatively fresh
+  });
+}
+
+/**
+ * Hook for fetching base SD JSON preview
+ */
+export function useBaseSDJsonPreview(projectId: string, profileId: string) {
+  return useQuery({
+    queryKey: previewKeys.sdBase(projectId, profileId),
+    queryFn: async (): Promise<PreviewData> => {
+      const response = await api.export.toBaseSD(projectId, profileId);
+      const sdData = response.data ?? response.content;
+      const content = typeof sdData === 'string' ? sdData : JSON.stringify(sdData, null, 2);
+      return {
+        content,
+        filename: response.metadata?.filename ?? `${profileId}-base.json`,
+      };
+    },
+    enabled: !!projectId && !!profileId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook for fetching differential SD JSON preview
+ */
+export function useDifferentialSDJsonPreview(projectId: string, profileId: string) {
+  return useQuery({
+    queryKey: previewKeys.sdDifferential(projectId, profileId),
+    queryFn: async (): Promise<PreviewData> => {
+      const response = await api.export.toSD(projectId, profileId, {
+        format: 'differential',
+      });
+      const sdData = response.data ?? response.content;
+      const content = typeof sdData === 'string' ? sdData : JSON.stringify(sdData, null, 2);
+      return {
+        content,
+        filename: response.metadata?.filename ?? `${profileId}-differential.json`,
+      };
+    },
+    enabled: !!projectId && !!profileId,
+    staleTime: 30 * 1000,
   });
 }
 

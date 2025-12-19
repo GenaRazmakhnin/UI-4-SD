@@ -394,6 +394,12 @@ export const realApi = {
       return apiClient.get<SdExportResponse>(url);
     },
 
+    /** Export base StructureDefinition JSON */
+    async toBaseSD(projectId: string, profileId: string): Promise<SdExportResponse> {
+      const url = `/api/projects/${projectId}/profiles/${profileId}/export/sd/base`;
+      return apiClient.get<SdExportResponse>(url);
+    },
+
     /** Export profile as FHIR Shorthand */
     async toFSH(
       projectId: string,

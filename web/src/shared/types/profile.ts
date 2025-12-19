@@ -4,11 +4,11 @@ export type DerivationType = 'constraint' | 'specialization';
 
 /**
  * Element source tracking - matches backend ElementSource
- * - 'Base': Inherited from base profile, unchanged
- * - 'Modified': Inherited from base but modified in this profile
- * - 'Added': New element added in this profile (e.g., slice, extension)
+ * - 'inherited': Inherited from base profile, unchanged
+ * - 'modified': Inherited from base but modified in this profile
+ * - 'added': New element added in this profile (e.g., slice, extension)
  */
-export type ElementSource = 'Base' | 'Modified' | 'Added';
+export type ElementSource = 'inherited' | 'modified' | 'added';
 
 export interface Profile {
   id: string;

@@ -63,3 +63,6 @@ pub use tracking::{
     Change, ChangeKind, ChangeTracker, EditHistory, HistoryState, Operation, OperationSummary,
 };
 pub use validation::{ValidationError, ValidationResult, ValidationSeverity};
+
+// Re-export DifferentialElement from merge module for convenience
+pub use crate::merge::DifferentialElement;

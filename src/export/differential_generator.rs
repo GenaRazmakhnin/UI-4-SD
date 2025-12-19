@@ -6,7 +6,7 @@
 
 use serde_json::Value;
 
-use crate::ir::{ElementNode, ProfiledResource};
+use crate::ir::ProfiledResource;
 
 use super::deterministic::sort_elements_by_path;
 use super::element_serializer::ElementSerializer;
@@ -35,116 +35,24 @@ impl DifferentialGenerator {
     pub async fn generate(&self, resource: &ProfiledResource) -> ExportResult<Vec<Value>> {
         let mut elements = Vec::new();
 
-        // Always include root element in differential
-        let root_element = self.serializer.serialize_element(&resource.root)?;
-        elements.push(root_element);
+        let root_path = resource.resource_type();
+        let has_root = resource
+            .differential
+            .iter()
+            .any(|diff| diff.path == root_path);
+        if !has_root {
+            let root_diff = crate::merge::DifferentialElement::new(root_path.to_string());
+            elements.push(self.serializer.serialize_differential_element(&root_diff)?);
+        }
 
-        // Collect modified elements
-        self.collect_modified_elements(&resource.root, &mut elements)?;
+        for diff in &resource.differential {
+            elements.push(self.serializer.serialize_differential_element(diff)?);
+        }
 
         // Sort elements by path for deterministic ordering
         sort_elements_by_path(&mut elements);
 
         Ok(elements)
-    }
-
-    /// Recursively collect modified elements from the tree.
-    fn collect_modified_elements(
-        &self,
-        element: &ElementNode,
-        elements: &mut Vec<Value>,
-    ) -> ExportResult<()> {
-        // Process children
-        for child in &element.children {
-            if self.should_include_element(child) {
-                if let Some(serialized) = self.serializer.serialize_element_differential(child)? {
-                    elements.push(serialized);
-                }
-
-                // Recursively check for modified descendants even if parent isn't modified
-                self.collect_modified_elements(child, elements)?;
-            } else {
-                // Still check children for modifications
-                self.collect_modified_elements(child, elements)?;
-            }
-        }
-
-        // Process slices (always include in differential as they are modifications)
-        for (_, slice) in &element.slices {
-            let slice_value = self.serializer.serialize_slice(slice, &element.path)?;
-            elements.push(slice_value);
-
-            // Include slice children that are modified
-            self.collect_slice_modified_children(&slice.element, &element.path, &slice.name, elements)?;
-        }
-
-        Ok(())
-    }
-
-    /// Collect modified children within a slice.
-    fn collect_slice_modified_children(
-        &self,
-        slice_element: &ElementNode,
-        parent_path: &str,
-        slice_name: &str,
-        elements: &mut Vec<Value>,
-    ) -> ExportResult<()> {
-        for child in &slice_element.children {
-            if self.should_include_element(child) {
-                // Adjust child path to include slice name
-                let child_path = format!("{}:{}.{}", parent_path, slice_name, child.short_name());
-                let mut child_serialized = self.serializer.serialize_element(child)?;
-
-                // Update path and id to include slice context
-                if let Some(obj) = child_serialized.as_object_mut() {
-                    obj.insert("path".to_string(), Value::String(child_path.clone()));
-                    obj.insert("id".to_string(), Value::String(child_path));
-                }
-
-                elements.push(child_serialized);
-            }
-
-            // Recursively collect nested modifications
-            self.collect_slice_modified_children(child, parent_path, slice_name, elements)?;
-        }
-
-        Ok(())
-    }
-
-    /// Determine if an element should be included in the differential.
-    fn should_include_element(&self, element: &ElementNode) -> bool {
-        // Include if explicitly modified
-        if element.source.is_modified() {
-            return true;
-        }
-
-        // Include if has any constraints set
-        if element.constraints.has_any() {
-            return true;
-        }
-
-        // Include if has slicing
-        if element.slicing.is_some() {
-            return true;
-        }
-
-        // Include if any descendant is modified
-        self.has_modified_descendants(element)
-    }
-
-    /// Check if any descendant is modified.
-    fn has_modified_descendants(&self, element: &ElementNode) -> bool {
-        for child in &element.children {
-            if child.source.is_modified() || child.constraints.has_any() || child.slicing.is_some() {
-                return true;
-            }
-            if self.has_modified_descendants(child) {
-                return true;
-            }
-        }
-
-        // Check slices
-        !element.slices.is_empty()
     }
 }
 
@@ -167,25 +75,15 @@ impl DifferentialAnalyzer {
     /// Analyze a resource and return paths of all modified elements.
     pub fn analyze(&mut self, resource: &ProfiledResource) -> &[String] {
         self.modified_paths.clear();
-        self.collect_modified_paths(&resource.root);
+        for diff in &resource.differential {
+            if let Some(slice_name) = diff.slice_name.as_deref() {
+                self.modified_paths
+                    .push(format!("{}:{}", diff.path, slice_name));
+            } else {
+                self.modified_paths.push(diff.path.clone());
+            }
+        }
         &self.modified_paths
-    }
-
-    /// Recursively collect paths of modified elements.
-    fn collect_modified_paths(&mut self, element: &ElementNode) {
-        if element.source.is_modified() || element.constraints.has_any() || element.slicing.is_some() {
-            self.modified_paths.push(element.path.clone());
-        }
-
-        for child in &element.children {
-            self.collect_modified_paths(child);
-        }
-
-        for (name, slice) in &element.slices {
-            let slice_path = format!("{}:{}", element.path, name);
-            self.modified_paths.push(slice_path);
-            self.collect_modified_paths(&slice.element);
-        }
     }
 }
 
@@ -212,43 +110,36 @@ impl DifferentialStats {
     /// Compute statistics from a profiled resource.
     pub fn from_resource(resource: &ProfiledResource) -> Self {
         let mut stats = Self::default();
-        stats.collect_stats(&resource.root);
+        stats.collect_stats(resource);
         stats
     }
 
-    fn collect_stats(&mut self, element: &ElementNode) {
-        if element.source.is_modified() || element.constraints.has_any() {
+    fn collect_stats(&mut self, resource: &ProfiledResource) {
+        for diff in &resource.differential {
             self.element_count += 1;
 
-            if element.constraints.cardinality.is_some() {
+            if diff.constraints.cardinality.is_some() {
                 self.cardinality_changes += 1;
             }
 
-            if !element.constraints.types.is_empty() {
+            if !diff.constraints.types.is_empty() {
                 self.type_constraints += 1;
             }
 
-            if element.constraints.binding.is_some() {
+            if diff.constraints.binding.is_some() {
                 self.binding_constraints += 1;
             }
 
-            if element.constraints.flags.must_support {
+            if diff.constraints.flags.must_support {
                 self.must_support_count += 1;
             }
-        }
 
-        if element.slicing.is_some() {
-            self.sliced_elements += 1;
-        }
-
-        self.slice_count += element.slices.len();
-
-        for child in &element.children {
-            self.collect_stats(child);
-        }
-
-        for slice in element.slices.values() {
-            self.collect_stats(&slice.element);
+            if diff.slicing.is_some() {
+                self.sliced_elements += 1;
+            }
+            if diff.slice_name.is_some() {
+                self.slice_count += 1;
+            }
         }
     }
 }
@@ -256,7 +147,7 @@ impl DifferentialStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BaseDefinition, Cardinality, ElementNode, ElementSource, FhirVersion, ProfiledResource};
+    use crate::ir::{BaseDefinition, Cardinality, DifferentialElement, FhirVersion, ProfiledResource};
 
     fn create_test_resource() -> ProfiledResource {
         let mut resource = ProfiledResource::new(
@@ -265,20 +156,11 @@ mod tests {
             BaseDefinition::resource("Patient"),
         );
 
-        // Add a modified element
-        let mut name = ElementNode::new("Patient.name".to_string());
-        name.source = ElementSource::Modified;
-        name.constraints.cardinality = Some(Cardinality::required());
+        let mut diff = DifferentialElement::new("Patient.name".to_string());
+        diff.constraints.cardinality = Some(Cardinality::required());
+        diff.constraints.flags.must_support = true;
 
-        // Add an unmodified child
-        let family = ElementNode::new("Patient.name.family".to_string());
-        name.add_child(family);
-
-        resource.root.add_child(name);
-
-        // Add an unmodified element
-        let identifier = ElementNode::new("Patient.identifier".to_string());
-        resource.root.add_child(identifier);
+        resource.differential.push(diff);
 
         resource
     }
@@ -311,10 +193,6 @@ mod tests {
             BaseDefinition::resource("Patient"),
         );
 
-        // Add only unmodified elements
-        let name = ElementNode::new("Patient.name".to_string());
-        resource.root.add_child(name);
-
         let generator = DifferentialGenerator::new();
         let elements = generator.generate(&resource).await.unwrap();
 
@@ -339,6 +217,5 @@ mod tests {
         let paths = analyzer.analyze(&resource);
 
         assert!(paths.contains(&"Patient.name".to_string()));
-        assert!(!paths.contains(&"Patient.identifier".to_string()));
     }
 }

@@ -18,6 +18,7 @@ use crate::ir::{
 use crate::state::AppState;
 
 use super::dto::*;
+use super::profile_merge::hydrate_profile_document;
 use super::storage::{ProfileStorage, StorageError};
 
 /// Create profile routes.
@@ -117,6 +118,14 @@ impl ErrorResponse {
                 message,
             )),
         )
+    }
+}
+
+impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        let status =
+            StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        (status, Json(self)).into_response()
     }
 }
 
@@ -269,7 +278,11 @@ async fn create_profile(
         return ErrorResponse::internal_error(e.to_string()).into_response();
     }
 
-    let response = ProfileDetailsResponse::from(&doc);
+    let hydrated = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
+    };
+    let response = ProfileDetailsResponse::from(&hydrated);
     (StatusCode::CREATED, Json(ApiResponse::ok(response))).into_response()
 }
 
@@ -284,6 +297,10 @@ async fn get_profile(
 
     match storage.load_profile(&params.profile_id).await {
         Ok(doc) => {
+            let doc = match hydrate_profile_document(&state, doc).await {
+                Ok(d) => d,
+                Err(e) => return e.into_response(),
+            };
             let response = ProfileDetailsResponse::from(&doc);
             Json(ApiResponse::ok(response)).into_response()
         }
@@ -385,7 +402,6 @@ async fn update_metadata(
         Ok(d) => d,
         Err(e) => return Into::<(StatusCode, Json<ErrorResponse>)>::into(e).into_response(),
     };
-
     // Update metadata fields
     if let Some(name) = req.name {
         doc.metadata.name = name;
@@ -427,7 +443,11 @@ async fn update_metadata(
         return ErrorResponse::internal_error(e.to_string()).into_response();
     }
 
-    let response = ProfileDetailsResponse::from(&doc);
+    let hydrated = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
+    };
+    let response = ProfileDetailsResponse::from(&hydrated);
     Json(ApiResponse::ok(response)).into_response()
 }
 
@@ -445,6 +465,10 @@ async fn update_element(
     let mut doc = match storage.load_profile(&params.profile_id).await {
         Ok(d) => d,
         Err(e) => return Into::<(StatusCode, Json<ErrorResponse>)>::into(e).into_response(),
+    };
+    let mut doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
     };
 
     // Find or create element at path
@@ -617,6 +641,7 @@ async fn import_profile(
 
     let project_dir = state.project_path(&params.project_id);
     let project_service = ProjectService::new(state.workspace_dir().clone());
+    let storage = ProfileStorage::new(&project_dir);
 
     // Ensure directories exist
     let ir_resources_dir = project_dir.join("IR").join("resources");
@@ -626,6 +651,9 @@ async fn import_profile(
     }
     if let Err(e) = fs::create_dir_all(&sd_dir).await {
         return ErrorResponse::internal_error(format!("Failed to create SD directory: {}", e)).into_response();
+    }
+    if let Err(e) = storage.init().await {
+        return ErrorResponse::internal_error(e.to_string()).into_response();
     }
 
     let mut diagnostics = Vec::new();
@@ -650,13 +678,8 @@ async fn import_profile(
                         });
                     }
 
-                    // Save profile document to IR/resources
-                    let ir_path = ir_resources_dir.join(format!("{}.json", doc.metadata.id));
-                    let content = match serde_json::to_string_pretty(&doc) {
-                        Ok(c) => c,
-                        Err(e) => return ErrorResponse::internal_error(format!("Failed to serialize profile: {}", e)).into_response(),
-                    };
-                    if let Err(e) = fs::write(&ir_path, &content).await {
+                    // Save profile document to IR/resources (differential-only)
+                    if let Err(e) = storage.save_profile(&doc).await {
                         return ErrorResponse::internal_error(format!("Failed to save profile: {}", e)).into_response();
                     }
 
@@ -700,8 +723,13 @@ async fn import_profile(
                         }
                     }
 
+                    let hydrated = match hydrate_profile_document(&state, doc).await {
+                        Ok(d) => d,
+                        Err(e) => return e.into_response(),
+                    };
+
                     let response = ImportResponse {
-                        profile: ProfileDetailsResponse::from(&doc),
+                        profile: ProfileDetailsResponse::from(&hydrated),
                         diagnostics,
                     };
 
@@ -783,13 +811,8 @@ async fn import_profile(
                         }
                     }
 
-                    // Save profile document to IR/resources
-                    let ir_path = ir_resources_dir.join(format!("{}.json", doc.metadata.id));
-                    let content = match serde_json::to_string_pretty(&doc) {
-                        Ok(c) => c,
-                        Err(e) => return ErrorResponse::internal_error(format!("Failed to serialize profile: {}", e)).into_response(),
-                    };
-                    if let Err(e) = fs::write(&ir_path, &content).await {
+                    // Save profile document to IR/resources (differential-only)
+                    if let Err(e) = storage.save_profile(&doc).await {
                         return ErrorResponse::internal_error(format!("Failed to save profile: {}", e)).into_response();
                     }
 
@@ -830,8 +853,13 @@ async fn import_profile(
                         }
                     }
 
+                    let hydrated = match hydrate_profile_document(&state, doc).await {
+                        Ok(d) => d,
+                        Err(e) => return e.into_response(),
+                    };
+
                     let response = ImportResponse {
-                        profile: ProfileDetailsResponse::from(&doc),
+                        profile: ProfileDetailsResponse::from(&hydrated),
                         diagnostics,
                     };
 

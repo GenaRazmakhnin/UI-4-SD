@@ -1,19 +1,7 @@
 {
   "version": 1,
-  "modifiedAt": "2025-12-19T12:53:35.012309Z",
+  "modifiedAt": "2025-12-19T15:39:43.122063Z",
   "resources": {
-    "t": {
-      "id": "t",
-      "canonicalUrl": "http://test.ort/StructureDefinition/test",
-      "kind": "profile",
-      "name": "test",
-      "sourceFormat": "ir",
-      "irPath": "IR/resources/t.json",
-      "base": "Patient",
-      "dependencies": [],
-      "createdAt": "2025-12-19T10:58:25.364852Z",
-      "modifiedAt": "2025-12-19T10:58:25.364852Z"
-    },
     "824653d2-6c4d-4763-9aab-f96a1bd5ec2c": {
       "id": "824653d2-6c4d-4763-9aab-f96a1bd5ec2c",
       "canonicalUrl": "https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CorePacienteCl",
@@ -24,8 +12,8 @@
       "sdPath": "./workspace/test/SD/StructureDefinition/824653d2-6c4d-4763-9aab-f96a1bd5ec2c.json",
       "base": "http://hl7.org/fhir/StructureDefinition/Patient",
       "dependencies": [],
-      "createdAt": "2025-12-19T12:53:34.985193Z",
-      "modifiedAt": "2025-12-19T12:53:34.985193Z"
+      "createdAt": "2025-12-19T15:39:43.095943Z",
+      "modifiedAt": "2025-12-19T15:39:43.095943Z"
     }
   }
 }

@@ -46,21 +46,21 @@
 //! }
 //! ```
 
-mod constraint_extractor;
 mod element_builder;
 mod error;
 mod sd_parser;
-mod slicing_importer;
 
-pub use constraint_extractor::ConstraintExtractor;
 pub use element_builder::ElementTreeBuilder;
 pub use error::{ImportError, ImportResult, ImportWarning};
 pub use sd_parser::{ParsedStructureDefinition, StructureDefinitionParser};
-pub use slicing_importer::SlicingImporter;
+
+use std::collections::HashMap;
+
+use serde_json::Value;
 
 use crate::ir::{
-    BaseDefinition, DocumentMetadata, FhirVersion, ProfileDocument, ProfileStatus,
-    ProfiledResource,
+    BaseDefinition, Discriminator, DiscriminatorType, DocumentMetadata, FhirVersion,
+    ProfileDocument, ProfileStatus, ProfiledResource, SlicingDefinition, SlicingRules,
 };
 
 /// Main importer for StructureDefinition JSON.
@@ -76,10 +76,6 @@ pub struct StructureDefinitionImporter {
     parser: StructureDefinitionParser,
     /// Builder for element tree.
     element_builder: ElementTreeBuilder,
-    /// Extractor for constraints.
-    constraint_extractor: ConstraintExtractor,
-    /// Importer for slicing.
-    slicing_importer: SlicingImporter,
 }
 
 impl Default for StructureDefinitionImporter {
@@ -95,8 +91,6 @@ impl StructureDefinitionImporter {
         Self {
             parser: StructureDefinitionParser::new(),
             element_builder: ElementTreeBuilder::new(),
-            constraint_extractor: ConstraintExtractor::new(),
-            slicing_importer: SlicingImporter::new(),
         }
     }
 
@@ -154,30 +148,18 @@ impl StructureDefinitionImporter {
             _ => crate::ir::StructureKind::Resource,
         };
 
-        // Build element tree from snapshot (or differential if no snapshot)
-        let elements = parsed
-            .snapshot_elements
-            .as_ref()
-            .or(parsed.differential_elements.as_ref())
-            .ok_or_else(|| {
-                ImportError::missing_field("snapshot.element or differential.element")
-            })?;
+        // Build differential-only representation
+        let mut differential = if let Some(diff_elements) = &parsed.differential_elements {
+            self.element_builder.build_differential_elements(diff_elements)?
+        } else {
+            Vec::new()
+        };
 
-        // Build the element tree
-        resource.root = self.element_builder.build_tree(
-            &parsed.type_name,
-            elements,
-            parsed.differential_elements.as_deref(),
-        )?;
-
-        // Extract constraints from differential
-        if let Some(diff_elements) = &parsed.differential_elements {
-            self.constraint_extractor
-                .apply_differential(&mut resource.root, diff_elements)?;
+        if let Some(snapshot_elements) = &parsed.snapshot_elements {
+            self.merge_snapshot_slicing(&mut differential, snapshot_elements)?;
         }
 
-        // Import slicing definitions
-        self.slicing_importer.import_slicing(&mut resource.root, elements)?;
+        resource.differential = differential;
 
         // Preserve unknown fields
         resource.unknown_fields = parsed.unknown_fields;
@@ -249,6 +231,102 @@ impl StructureDefinitionImporter {
             .unwrap_or("unknown")
             .to_string()
     }
+
+    fn merge_snapshot_slicing(
+        &self,
+        differential: &mut Vec<crate::merge::DifferentialElement>,
+        snapshot: &[Value],
+    ) -> ImportResult<()> {
+        let mut by_path: HashMap<String, usize> = differential
+            .iter()
+            .enumerate()
+            .filter(|(_, diff)| diff.slice_name.is_none())
+            .map(|(idx, diff)| (diff.path.clone(), idx))
+            .collect();
+
+        for element in snapshot {
+            let path = element
+                .get("path")
+                .and_then(Value::as_str)
+                .ok_or_else(|| ImportError::missing_field("snapshot.element.path"))?;
+
+            if path.contains(':') {
+                continue;
+            }
+
+            let slicing = match element.get("slicing") {
+                Some(slicing) => self.parse_slicing_definition(slicing)?,
+                None => continue,
+            };
+
+            if let Some(index) = by_path.get(path).copied() {
+                if differential[index].slicing.is_none() {
+                    differential[index].slicing = Some(slicing);
+                }
+                continue;
+            }
+
+            let mut diff = crate::merge::DifferentialElement::new(path.to_string());
+            if let Some(id) = element.get("id").and_then(Value::as_str) {
+                diff.element_id = Some(id.to_string());
+            }
+            diff.slicing = Some(slicing);
+            differential.push(diff);
+            by_path.insert(path.to_string(), differential.len() - 1);
+        }
+
+        Ok(())
+    }
+
+    fn parse_slicing_definition(&self, slicing: &Value) -> ImportResult<SlicingDefinition> {
+        let discriminators = slicing
+            .get("discriminator")
+            .and_then(Value::as_array)
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|d| {
+                        let disc_type = d.get("type").and_then(Value::as_str)?;
+                        let path = d.get("path").and_then(Value::as_str)?;
+                        let disc_type = match disc_type {
+                            "value" => DiscriminatorType::Value,
+                            "exists" => DiscriminatorType::Exists,
+                            "pattern" => DiscriminatorType::Pattern,
+                            "type" => DiscriminatorType::Type,
+                            "profile" => DiscriminatorType::Profile,
+                            "position" => DiscriminatorType::Position,
+                            _ => return None,
+                        };
+
+                        Some(Discriminator {
+                            discriminator_type: disc_type,
+                            path: path.to_string(),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let description = slicing
+            .get("description")
+            .and_then(Value::as_str)
+            .map(String::from);
+
+        let ordered = slicing.get("ordered").and_then(Value::as_bool).unwrap_or(false);
+
+        let rules = match slicing.get("rules").and_then(Value::as_str) {
+            Some("closed") => SlicingRules::Closed,
+            Some("open") => SlicingRules::Open,
+            Some("openAtEnd") => SlicingRules::OpenAtEnd,
+            _ => SlicingRules::Open,
+        };
+
+        Ok(SlicingDefinition {
+            discriminator: discriminators,
+            description,
+            ordered,
+            rules,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -285,5 +363,134 @@ mod tests {
         let doc = result.unwrap();
         assert_eq!(doc.metadata.name, "TestProfile");
         assert_eq!(doc.metadata.status, ProfileStatus::Draft);
+    }
+
+    #[tokio::test]
+    async fn test_import_snapshot_slicing_fallback() {
+        let json = r#"{
+            "resourceType": "StructureDefinition",
+            "url": "http://example.org/fhir/StructureDefinition/TestSlicingProfile",
+            "name": "TestSlicingProfile",
+            "status": "draft",
+            "kind": "resource",
+            "abstract": false,
+            "type": "Patient",
+            "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+            "derivation": "constraint",
+            "snapshot": {
+                "element": [
+                    {
+                        "id": "Patient",
+                        "path": "Patient"
+                    },
+                    {
+                        "id": "Patient.identifier.type.extension",
+                        "path": "Patient.identifier.type.extension",
+                        "min": 0,
+                        "max": "*",
+                        "slicing": {
+                            "rules": "open",
+                            "discriminator": [
+                                {
+                                    "type": "value",
+                                    "path": "url"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "differential": {
+                "element": [
+                    {
+                        "id": "Patient",
+                        "path": "Patient"
+                    },
+                    {
+                        "id": "Patient.identifier.type.extension",
+                        "path": "Patient.identifier.type.extension"
+                    }
+                ]
+            }
+        }"#;
+
+        let importer = StructureDefinitionImporter::new();
+        let result = importer.import_json(json).await;
+
+        assert!(result.is_ok(), "Import failed: {:?}", result.err());
+
+        let doc = result.unwrap();
+        let diff = doc
+            .resource
+            .differential
+            .iter()
+            .find(|d| d.path == "Patient.identifier.type.extension")
+            .expect("Missing slicing differential element");
+
+        let slicing = diff.slicing.as_ref().expect("Missing slicing definition");
+        assert_eq!(slicing.discriminator.len(), 1);
+        assert_eq!(slicing.discriminator[0].path, "url");
+        assert_eq!(slicing.discriminator[0].discriminator_type, DiscriminatorType::Value);
+    }
+
+    #[tokio::test]
+    async fn test_snapshot_slicing_applies_to_base_element_with_slice_entries() {
+        let json = r#"{
+            "resourceType": "StructureDefinition",
+            "url": "http://example.org/fhir/StructureDefinition/TestSliceOnlyProfile",
+            "name": "TestSliceOnlyProfile",
+            "status": "draft",
+            "kind": "resource",
+            "abstract": false,
+            "type": "Patient",
+            "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+            "derivation": "constraint",
+            "snapshot": {
+                "element": [
+                    { "id": "Patient", "path": "Patient" },
+                    {
+                        "id": "Patient.identifier.type.extension",
+                        "path": "Patient.identifier.type.extension",
+                        "slicing": {
+                            "rules": "open",
+                            "discriminator": [
+                                { "type": "value", "path": "url" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "differential": {
+                "element": [
+                    { "id": "Patient", "path": "Patient" },
+                    {
+                        "id": "Patient.identifier.type.extension:paisEmisionDocumento",
+                        "path": "Patient.identifier.type.extension",
+                        "sliceName": "paisEmisionDocumento"
+                    }
+                ]
+            }
+        }"#;
+
+        let importer = StructureDefinitionImporter::new();
+        let result = importer.import_json(json).await;
+
+        assert!(result.is_ok(), "Import failed: {:?}", result.err());
+
+        let doc = result.unwrap();
+        let base_diff = doc
+            .resource
+            .differential
+            .iter()
+            .find(|d| d.path == "Patient.identifier.type.extension" && d.slice_name.is_none())
+            .expect("Missing base differential element");
+
+        let slicing = base_diff
+            .slicing
+            .as_ref()
+            .expect("Missing slicing definition on base element");
+        assert_eq!(slicing.discriminator.len(), 1);
+        assert_eq!(slicing.discriminator[0].path, "url");
+        assert_eq!(slicing.discriminator[0].discriminator_type, DiscriminatorType::Value);
     }
 }
