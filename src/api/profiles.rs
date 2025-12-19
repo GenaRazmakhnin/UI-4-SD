@@ -309,7 +309,7 @@ async fn get_input_it(
     };
 
     // Try to find the original SD JSON file
-    let sd_dir = project_dir.join("SD").join("StructureDefinition");
+    let sd_dir = project_dir.join("IR").join("resources");
     let sd_path = sd_dir.join(format!("{}.json", doc.metadata.name));
 
     match fs::read_to_string(&sd_path).await {
