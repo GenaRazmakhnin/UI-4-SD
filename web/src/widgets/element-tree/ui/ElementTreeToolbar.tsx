@@ -1,5 +1,5 @@
-import { ActionIcon, Button, Group, Switch, TextInput, Tooltip } from '@mantine/core';
-import { IconChevronDown, IconChevronRight, IconFilter, IconSearch } from '@tabler/icons-react';
+import { ActionIcon, Group, Switch, TextInput, Tooltip } from '@mantine/core';
+import { IconChevronDown, IconChevronRight, IconSearch } from '@tabler/icons-react';
 import { useUnit } from 'effector-react';
 import {
   $filterOptions,

@@ -164,15 +164,125 @@ export const $filteredTree = combine($elementTree, $filterOptions, (tree, filter
   return filterTree(tree);
 });
 
-export const $flattenedElements = combine($filteredTree, $expandedPaths, (tree, expanded) => {
-  const flatten = (nodes: ElementNode[]): ElementNode[] => {
-    return nodes.flatMap((node) => {
-      const isExpanded = expanded.has(node.path);
-      return [node, ...(isExpanded && node.children.length > 0 ? flatten(node.children) : [])];
-    });
+// Derive slice controls for non-extension slicing nodes
+export const $sliceControls = $elementTree.map((tree) => {
+  const controls: { path: string; slices: string[] }[] = [];
+
+  const visit = (nodes: ElementNode[]) => {
+    for (const node of nodes) {
+      if (node.slicing && !node.path.endsWith('extension')) {
+        const sliceNames = node.children.map((c) => c.sliceName).filter(Boolean) as string[];
+        if (sliceNames.length > 0) {
+          controls.push({ path: node.path, slices: sliceNames });
+        }
+      }
+      if (node.children.length > 0) visit(node.children);
+    }
   };
-  return flatten(tree);
+
+  visit(tree);
+  return controls;
 });
+
+export const $flattenedElements = combine(
+  $filteredTree,
+  $expandedPaths,
+  $sliceViews,
+  (tree, expanded, sliceViews) => {
+    const flatten = (nodes: ElementNode[], depth: number): ElementNode[] => {
+      return nodes.flatMap((node) => {
+        const isHiddenExtensionContainer =
+          node.path.endsWith('.extension') && node.children.length > 0 && !node.sliceName;
+
+        // Skip only non-sliced extension containers; render children at same depth
+        if (isHiddenExtensionContainer) {
+          return flatten(node.children, depth);
+        }
+
+        const isNonExtensionSlicing = !!node.slicing && !node.path.endsWith('extension');
+        const currentView = isNonExtensionSlicing ? sliceViews[node.path] ?? 'base' : 'base';
+        const sliceChildren = isNonExtensionSlicing
+          ? node.children.filter((c) => c.sliceName)
+          : [];
+        const baseChildren = isNonExtensionSlicing
+          ? node.children.filter((c) => !c.sliceName)
+          : node.children;
+
+        const matchedSlice =
+          currentView !== 'base'
+            ? sliceChildren.find((c) => c.sliceName === currentView)
+            : null;
+
+        const childrenFromSlice =
+          isNonExtensionSlicing && currentView !== 'base' ? matchedSlice?.children ?? [] : [];
+
+        let childrenToRender: ElementNode[] = baseChildren;
+
+        if (isNonExtensionSlicing && currentView !== 'base') {
+          const byPath = new Map<string, ElementNode>();
+          // Keep order of base children
+          for (const child of baseChildren) {
+            byPath.set(child.path, child);
+          }
+          for (const child of childrenFromSlice) {
+            byPath.set(child.path, child);
+          }
+          childrenToRender = Array.from(byPath.values());
+          // Append slice-only children that were not in base to preserve any ordering from slice
+          for (const child of childrenFromSlice) {
+            if (!baseChildren.find((b) => b.path === child.path)) {
+              childrenToRender.push(child);
+            }
+          }
+        }
+
+        const isSimpleExtension =
+          node.path.endsWith('extension') &&
+          node.children.length > 0 &&
+          node.children.every(
+            (c) => (c.path.endsWith('.url') || c.path.endsWith('.value[x]') || c.path.endsWith('.value')) && c.children.length === 0
+          );
+        if (isSimpleExtension) {
+          childrenToRender = [];
+        }
+
+        // Keep non-extension children first, push extension nodes to the bottom
+        if (childrenToRender.length > 0) {
+          childrenToRender = [...childrenToRender].sort((a, b) => {
+            const aExt = a.path.endsWith('extension') ? 1 : 0;
+            const bExt = b.path.endsWith('extension') ? 1 : 0;
+            return aExt - bExt;
+          });
+        }
+
+        const sliceNames = sliceChildren.map((c) => c.sliceName).filter(Boolean) as string[];
+
+        const extendedNode = {
+          ...node,
+          children: childrenToRender,
+          __depth: depth,
+          __sliceNames: sliceNames,
+          __displayName:
+            node.sliceName && node.path.endsWith('extension')
+              ? node.sliceName
+              : isNonExtensionSlicing && currentView !== 'base'
+              ? `${node.path.split('.').slice(-1)[0]}:${currentView}`
+              : undefined,
+        } as ElementNode & { __depth?: number; __displayName?: string };
+
+        const isExpanded = expanded.has(node.path);
+
+        return [
+          extendedNode,
+          ...(isExpanded && childrenToRender.length > 0
+            ? flatten(childrenToRender, depth + 1)
+            : []),
+        ];
+      });
+    };
+    return flatten(tree, 0);
+  }
+);
 
 // Store updates
 $selectedElementId.on(elementSelected, (_, element) => element.id);
@@ -202,6 +312,11 @@ $expandedPaths.on(expandAll, () => {
 });
 
 $expandedPaths.on(collapseAll, () => new Set());
+$expandedPaths.on(sliceViewChanged, (paths, { path }) => {
+  const newPaths = new Set(paths);
+  newPaths.add(path);
+  return newPaths;
+});
 
 $filterOptions.on(filterChanged, (current, updates) => ({
   ...current,

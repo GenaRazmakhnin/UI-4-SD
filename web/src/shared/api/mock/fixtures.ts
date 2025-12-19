@@ -477,6 +477,87 @@ export const usCorePatient: Profile = {
       isModified: false,
       children: [
         {
+          id: 'Patient.extension',
+          path: 'Patient.extension',
+          min: 2,
+          max: '*',
+          short: 'Patient extensions (sliced by URL pattern)',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: 'url' }],
+            rules: 'open',
+            ordered: false,
+          },
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.extension:ethnicity',
+              path: 'Patient.extension',
+              sliceName: 'ethnicity',
+              min: 1,
+              max: '1',
+              short: '(USCDI) US Core ethnicity Extension',
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.extension:ethnicity.url',
+                  path: 'Patient.extension.url',
+                  min: 1,
+                  max: '1',
+                  short: 'Extension URL (pattern-sliced)',
+                  definition:
+                    'Slice discriminated by pattern on url = http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity',
+                  type: [{ code: 'uri' }],
+                  isModified: true,
+                  children: [],
+                },
+                {
+                  id: 'Patient.extension:ethnicity.value[x]',
+                  path: 'Patient.extension.value[x]',
+                  min: 0,
+                  max: '1',
+                  short: 'Ethnicity value',
+                  type: [{ code: 'CodeableConcept' }],
+                  isModified: true,
+                  children: [],
+                },
+              ],
+            },
+            {
+              id: 'Patient.extension:race',
+              path: 'Patient.extension',
+              sliceName: 'race',
+              min: 1,
+              max: '1',
+              short: '(USCDI) US Core Race Extension',
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.extension:race.url',
+                  path: 'Patient.extension.url',
+                  min: 1,
+                  max: '1',
+                  short: 'Extension URL (pattern-sliced)',
+                  definition:
+                    'Slice discriminated by pattern on url = http://hl7.org/fhir/us/core/StructureDefinition/us-core-race',
+                  type: [{ code: 'uri' }],
+                  isModified: true,
+                  children: [],
+                },
+                {
+                  id: 'Patient.extension:race.value[x]',
+                  path: 'Patient.extension.value[x]',
+                  min: 0,
+                  max: '1',
+                  short: 'Race value',
+                  type: [{ code: 'CodeableConcept' }],
+                  isModified: true,
+                  children: [],
+                },
+              ],
+            }
+          ]
+        },
+        {
           id: 'Patient.identifier',
           path: 'Patient.identifier',
           min: 1,
@@ -531,6 +612,826 @@ export const usCorePatient: Profile = {
             valueSet: 'http://hl7.org/fhir/ValueSet/administrative-gender',
           },
           children: [],
+        },
+      ],
+    },
+  ],
+  isDirty: false,
+};
+
+// Mock Profile: Chile Core Patient (CL Core)
+export const clCorePatient: Profile = {
+  id: 'cl-core-patient',
+  url: 'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CorePacienteCl',
+  name: 'CorePacienteCl',
+  title: 'Core Paciente CL',
+  status: 'active',
+  fhirVersion: '4.0.1',
+  baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Patient',
+  derivation: 'constraint',
+  elements: [
+    {
+      id: 'Patient',
+      path: 'Patient',
+      min: 0,
+      max: '*',
+      isModified: false,
+      children: [
+        {
+          id: 'Patient.extension',
+          path: 'Patient.extension',
+          min: 0,
+          max: '*',
+          short: 'Extensiones de paciente (slicing por URL)',
+          slicing: {
+            discriminator: [{ path: 'url', type: 'value' }],
+            rules: 'open',
+            ordered: false,
+          },
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.extension:nacionalidad',
+              path: 'Patient.extension',
+              sliceName: 'nacionalidad',
+              min: 0,
+              max: '2147483647',
+              short: 'Nacionalidad (Código de País)',
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.extension:nacionalidad.url',
+                  path: 'Patient.extension.url',
+                  min: 1,
+                  max: '1',
+                  short: 'URL de extensión nacionalidad',
+                  definition:
+                    'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CodigoPaises',
+                  type: [{ code: 'uri' }],
+                  isModified: true,
+                  children: [],
+                },
+              ],
+            },
+            {
+              id: 'Patient.extension:SexoBiologico',
+              path: 'Patient.extension',
+              sliceName: 'SexoBiologico',
+              min: 0,
+              max: '1',
+              short: 'Extensión Sexo Biológico',
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.extension:SexoBiologico.url',
+                  path: 'Patient.extension.url',
+                  min: 1,
+                  max: '1',
+                  short: 'URL de extensión Sexo Biológico',
+                  definition:
+                    'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/SexoBiologico',
+                  type: [{ code: 'uri' }],
+                  isModified: true,
+                  children: [],
+                },
+              ],
+            },
+            {
+              id: 'Patient.extension:IdentidadDeGenero',
+              path: 'Patient.extension',
+              sliceName: 'IdentidadDeGenero',
+              min: 0,
+              max: '1',
+              short: 'Extensión Identidad de Género',
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.extension:IdentidadDeGenero.url',
+                  path: 'Patient.extension.url',
+                  min: 1,
+                  max: '1',
+                  short: 'URL de extensión Identidad de Género',
+                  definition:
+                    'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/IdentidadDeGenero',
+                  type: [{ code: 'uri' }],
+                  isModified: true,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'Patient.gender',
+          path: 'Patient.gender',
+          min: 0,
+          max: '1',
+          short: 'Sexo Registrado. (male | female | other | unknown)',
+          definition: 'Sexo Registrado',
+          mustSupport: true,
+          isModified: true,
+          children: [],
+        },
+        {
+          id: 'Patient.name',
+          path: 'Patient.name',
+          min: 0,
+          max: '*',
+          short:
+            'Nombres y Apellidos del Paciente considerando, según el caso: 1er Nombre, Nombres, 1er Apellido y 2o Apellido',
+          definition:
+            'Nombre del Paciente considerando, según el caso: 1er Nombre, Nombres, 1er Apellido y 2o Apellido',
+          slicing: {
+            discriminator: [{ path: 'use', type: 'value' }],
+            rules: 'open',
+            ordered: false,
+            description:
+              'Este slice se genera para diferenciar el nombre registrado Versus el nombre social',
+          },
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.name.use',
+              path: 'Patient.name.use',
+              min: 0,
+              max: '1',
+              short: "usual | official | temp | nickname | anonymous | old | maiden",
+              definition: 'Identifies the purpose for this name.',
+              comment:
+                "Applications can assume that a name is current unless it explicitly says that it is temporary or old.",
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/ValueSet/name-use',
+              },
+              type: [{ code: 'code' }],
+              isModified: false,
+              children: [],
+            },
+            {
+              id: 'Patient.name.text',
+              path: 'Patient.name.text',
+              min: 0,
+              max: '1',
+              short: 'Text representation of the full name',
+              definition:
+                'Specifies the entire name as it should be displayed e.g. on an application UI.',
+              isModified: false,
+              type: [{ code: 'string' }],
+              children: [],
+            },
+            {
+              id: 'Patient.name.given',
+              path: 'Patient.name.given',
+              min: 0,
+              max: '*',
+              short: "Given names (not always 'first'). Includes middle names",
+              definition: 'Given name.',
+              isModified: false,
+              type: [{ code: 'string' }],
+              children: [],
+            },
+            {
+              id: 'Patient.name.family',
+              path: 'Patient.name.family',
+              min: 0,
+              max: '1',
+              short: "Family name (often called 'Surname')",
+              definition:
+                'The part of a name that links to the genealogy. In some cultures the family name of a son is the first name of his father.',
+              isModified: false,
+              type: [{ code: 'string' }],
+              children: [],
+            },
+            {
+              id: 'Patient.name.prefix',
+              path: 'Patient.name.prefix',
+              min: 0,
+              max: '*',
+              short: 'Parts that come before the name',
+              definition:
+                'Title or part of the name that appears at the start (academic, legal, nobility, etc.).',
+              isModified: false,
+              type: [{ code: 'string' }],
+              children: [],
+            },
+            {
+              id: 'Patient.name.suffix',
+              path: 'Patient.name.suffix',
+              min: 0,
+              max: '*',
+              short: 'Parts that come after the name',
+              definition:
+                'Part of the name acquired as a title that appears at the end of the name.',
+              isModified: false,
+              type: [{ code: 'string' }],
+              children: [],
+            },
+            {
+              id: 'Patient.name.period',
+              path: 'Patient.name.period',
+              min: 0,
+              max: '1',
+              short: 'Time period when name was/is in use',
+              definition: 'Indicates the period of time when this name was valid for the person.',
+              isModified: false,
+              type: [{ code: 'Period' }],
+              children: [],
+            },
+            {
+              id: 'Patient.name:NombreSocial',
+              path: 'Patient.name',
+              sliceName: 'NombreSocial',
+              min: 0,
+              max: '1',
+              short: 'Nombre social del paciente',
+              definition: 'Nombre con el cual se identifica al paciente sin ser este oficial.',
+              mustSupport: true,
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.name:NombreSocial.use',
+                  path: 'Patient.name.use',
+                  min: 1,
+                  max: '1',
+                  short: 'Uso del nombre',
+                  comment:
+                    'Para ser considerado como nombre social, el use DEBE ser "usual".',
+                  definition:
+                    'Uso se fuerza a usual para identificar el slice de nombre social.',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [],
+                },
+                {
+                  id: 'Patient.name:NombreSocial.given',
+                  path: 'Patient.name.given',
+                  min: 1,
+                  max: '*',
+                  short: 'Nombre Social',
+                  definition: 'Nombre Social del Paciente',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [],
+                },
+              ],
+            },
+            {
+              id: 'Patient.name:NombreOficial',
+              path: 'Patient.name',
+              sliceName: 'NombreOficial',
+              min: 0,
+              max: '1',
+              short: 'Nombre registrado oficialmente',
+              definition: 'Determinación del nombre registrado oficialmente del Paciente',
+              mustSupport: true,
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.name:NombreOficial.use',
+                  path: 'Patient.name.use',
+                  min: 1,
+                  max: '1',
+                  short: 'Uso del nombre oficial',
+                  comment:
+                    'Para ser considerado como nombre oficial, el use DEBE ser "official".',
+                  definition:
+                    'Slice corresponde al nombre registrado al nacer, use se fuerza a official.',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [],
+                },
+                {
+                  id: 'Patient.name:NombreOficial.given',
+                  path: 'Patient.name.given',
+                  min: 1,
+                  max: '*',
+                  short: 'Primer nombre y nombres del Paciente',
+                  definition:
+                    'Todos los nombres de los pacientes no necesariamente solo el primer nombre.',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [],
+                },
+                {
+                  id: 'Patient.name:NombreOficial.family',
+                  path: 'Patient.name.family',
+                  min: 1,
+                  max: '1',
+                  short: '1er Apellido',
+                  definition:
+                    'Primer apellido registrado al nacer o inscrito legalmente en el Registro Civil.',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [
+                    {
+                      id: 'Patient.name:NombreOficial.family.extension',
+                      path: 'Patient.name.family.extension',
+                      min: 0,
+                      max: '*',
+                      short: 'Extensión para el segundo apellido',
+                      slicing: {
+                        discriminator: [{ path: 'url', type: 'value' }],
+                        rules: 'open',
+                        ordered: false,
+                      },
+                      isModified: true,
+                      children: [
+                        {
+                          id: 'Patient.name:NombreOficial.family.extension:segundoApellido',
+                          path: 'Patient.name.family.extension',
+                          sliceName: 'segundoApellido',
+                          min: 0,
+                          max: '1',
+                          short: 'Extensión segundo apellido',
+                          definition:
+                            'Extensión para la declaración de un segundo apellido.',
+                          isModified: true,
+                          children: [
+                            {
+                              id: 'Patient.name:NombreOficial.family.extension:segundoApellido.url',
+                              path: 'Patient.name.family.extension.url',
+                              min: 1,
+                              max: '1',
+                              short: 'URL de extensión segundo apellido',
+                              definition:
+                                'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/SegundoApellido',
+                              type: [{ code: 'uri' }],
+                              isModified: true,
+                              children: [],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'Patient.address',
+          path: 'Patient.address',
+          min: 0,
+          max: '*',
+          type: [{ code: 'Address' }],
+          mustSupport: true,
+          isModified: true,
+          children: [],
+        },
+        {
+          id: 'Patient.identifier',
+          path: 'Patient.identifier',
+          min: 0,
+          max: '*',
+          short:
+            'Listados de Id de Paciente. De poseer una CI con RUN vigente, este DEBE ser ingresado',
+          definition:
+            'Este es el listado de Identificaciones de un paciente. Se procura como R2 el RUN, pero en caso de no existir ese identificador se debe ocupar otro nacional u otro otorgado por país extranjero',
+          comment:
+            'La identificación implica el ingreso del tipo de documento, el país de origen y el valor.',
+          mustSupport: true,
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.identifier.use',
+              path: 'Patient.identifier.use',
+              min: 0,
+              max: '1',
+              comment:
+                'Se definirá como official en primera etapa; se abrirá en siguientes iteraciones.',
+              definition:
+                'De contar el Paciente con una Cédula de Identidad Nacional, se sugiere el uso de esta como identificador.',
+              mustSupport: true,
+              isModified: true,
+              children: [],
+            },
+            {
+              id: 'Patient.identifier.type',
+              path: 'Patient.identifier.type',
+              min: 0,
+              max: '1',
+              short: 'Tipo de documento de Id (Extensible)',
+              definition:
+                'Tipo de documento de Id definido en el Sistema de Codificación V2-0203 de HL7.',
+              comment:
+                'Pacientes sin documento local deben especificar el de origen; sin Id usar MR (registro clínico).',
+              binding: {
+                strength: 'extensible',
+                valueSet: 'https://hl7chile.cl/fhir/ig/clcore/ValueSet/VSTiposDocumentos',
+                description: 'Tipos de documentos de identificación',
+              },
+              mustSupport: true,
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.identifier.type.coding',
+                  path: 'Patient.identifier.type.coding',
+                  min: 0,
+                  max: '*',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [
+                    {
+                      id: 'Patient.identifier.type.coding.code',
+                      path: 'Patient.identifier.type.coding.code',
+                      min: 0,
+                      max: '1',
+                      short: 'Código de Tipo de Documento',
+                      definition: 'Código de Tipo de Documento',
+                      mustSupport: true,
+                      isModified: true,
+                      children: [],
+                    },
+                    {
+                      id: 'Patient.identifier.type.coding.system',
+                      path: 'Patient.identifier.type.coding.system',
+                      min: 0,
+                      max: '1',
+                      short: 'Sistema de identificación de tipos de documentos',
+                      comment:
+                        'Ejemplo: Cédula chilena NNCL; Pasaporte usa PPT según VS.',
+                      definition:
+                        'Sistema mediante el cual se obtienen los códigos para un determinado tipo de documento.',
+                      mustSupport: true,
+                      isModified: true,
+                      children: [],
+                    },
+                    {
+                      id: 'Patient.identifier.type.coding.display',
+                      path: 'Patient.identifier.type.coding.display',
+                      min: 0,
+                      max: '1',
+                      short: 'Glosa del Código Documento',
+                      definition: 'Glosa del Código Documento',
+                      mustSupport: true,
+                      isModified: true,
+                      children: [],
+                    },
+                  ],
+                },
+                {
+                  id: 'Patient.identifier.type.extension',
+                  path: 'Patient.identifier.type.extension',
+                  min: 0,
+                  max: '*',
+                  short: 'País de Origen del Documento de Id',
+                  slicing: {
+                    discriminator: [{ path: 'url', type: 'value' }],
+                    rules: 'open',
+                    ordered: false,
+                  },
+                  definition:
+                    'Se usa esta extensión para agregarle al tipo de documento el país de origen.',
+                  isModified: true,
+                  children: [
+                    {
+                      id: 'Patient.identifier.type.extension:paisEmisionDocumento',
+                      path: 'Patient.identifier.type.extension',
+                      sliceName: 'paisEmisionDocumento',
+                      min: 0,
+                      max: '1',
+                      short: 'País de emisión del documento',
+                      type: [{ code: 'Extension' }],
+                      mustSupport: true,
+                      isModified: true,
+                      children: [
+                        {
+                          id: 'Patient.identifier.type.extension:paisEmisionDocumento.url',
+                          path: 'Patient.identifier.type.extension.url',
+                          min: 1,
+                          max: '1',
+                          short: 'URL extensión país emisión',
+                          definition:
+                            'Extensión para país de origen del documento de identificación.',
+                          type: [{ code: 'uri' }],
+                          isModified: true,
+                          children: [],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'Patient.identifier.value',
+              path: 'Patient.identifier.value',
+              min: 0,
+              max: '1',
+              short: 'Número o valor de identificación',
+              definition: 'Número o valor de identificación',
+              isModified: true,
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'Patient.birthDate',
+          path: 'Patient.birthDate',
+          min: 0,
+          max: '1',
+          short: 'Fecha de nacimiento del Paciente.',
+          definition: 'Fecha de nacimiento del Paciente.',
+          mustSupport: true,
+          isModified: true,
+          children: [],
+        },
+        {
+          id: 'Patient.communication',
+          path: 'Patient.communication',
+          min: 0,
+          max: '*',
+          short: 'Lenguaje en el cual se puede comunicar con el paciente',
+          definition: 'Lenguaje en el cual se puede comunicar con el paciente',
+          mustSupport: true,
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.communication.language',
+              path: 'Patient.communication.language',
+              min: 0,
+              max: '1',
+              short: 'Lenguaje específico',
+              definition: 'Código del lenguaje específico',
+              binding: {
+                strength: 'required',
+                valueSet: 'https://hl7chile.cl/fhir/ig/clcore/ValueSet/VSCodigoslenguaje',
+                description: 'Lenguajes soportados',
+              },
+              mustSupport: true,
+              isModified: true,
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'Patient.telecom',
+          path: 'Patient.telecom',
+          min: 0,
+          max: '*',
+          short: 'Detalles de contacto del Paciente',
+          definition:
+            'Detalles del contacto de un paciente comúnmente el o los más usados (teléfono, email, etc.)',
+          mustSupport: true,
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.telecom.use',
+              path: 'Patient.telecom.use',
+              min: 0,
+              max: '1',
+              short: 'home | work | temp | old | mobile',
+              definition: 'Propósito para el contacto definido',
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/ValueSet/contact-point-use',
+                description: 'Uso del punto de contacto',
+              },
+              mustSupport: true,
+              isModified: true,
+              children: [],
+            },
+            {
+              id: 'Patient.telecom.value',
+              path: 'Patient.telecom.value',
+              min: 0,
+              max: '1',
+              short: 'Dato del contacto del paciente',
+              definition:
+                'Valor del contacto como por ejemplo el número de teléfono fijo, móvil o el email del Paciente.',
+              mustSupport: true,
+              isModified: true,
+              children: [],
+            },
+            {
+              id: 'Patient.telecom.system',
+              path: 'Patient.telecom.system',
+              min: 0,
+              max: '1',
+              definition:
+                'Forma de telecomunicación para el punto de contacto: qué sistema de comunicación se requiere.',
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/ValueSet/contact-point-system',
+                description: 'Sistema de contacto',
+              },
+              mustSupport: true,
+              isModified: true,
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'Patient.generalPractitioner',
+          path: 'Patient.generalPractitioner',
+          min: 0,
+          max: '*',
+          short: 'Proveedor de Salud designado como principal',
+          definition: 'Proveedor de Salud designado como principal',
+          type: [
+            {
+              code: 'Reference',
+              targetProfile: [
+                'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CoreOrganizacionCl|1.9.4',
+                'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CorePrestadorCl|1.9.4',
+                'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CoreRolClinicoCl|1.9.4',
+              ],
+            },
+          ],
+          mustSupport: true,
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.generalPractitioner.display',
+              path: 'Patient.generalPractitioner.display',
+              min: 0,
+              max: '1',
+              short: 'Texto alternativo a la referencia',
+              definition: 'Texto alternativo a la referencia',
+              mustSupport: true,
+              isModified: true,
+              children: [],
+            },
+            {
+              id: 'Patient.generalPractitioner.reference',
+              path: 'Patient.generalPractitioner.reference',
+              min: 0,
+              max: '1',
+              short: 'URI de referencia a la Organización o a un Médico',
+              definition: 'URI de referencia a la Organización o a un Médico',
+              mustSupport: true,
+              isModified: true,
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'Patient.contact',
+          path: 'Patient.contact',
+          min: 0,
+          max: '*',
+          short: 'Contacto, tutor legal o representante del Paciente',
+          definition: 'Contacto, tutor legal o representante del Paciente',
+          mustSupport: true,
+          isModified: true,
+          children: [
+            {
+              id: 'Patient.contact.name',
+              path: 'Patient.contact.name',
+              min: 0,
+              max: '1',
+              short: 'Nombre del Contacto',
+              definition: 'Nombre del contacto asociado al paciente',
+              mustSupport: true,
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.contact.name.use',
+                  path: 'Patient.contact.name.use',
+                  min: 1,
+                  max: '1',
+                  short: 'Uso del nombre del contacto',
+                  comment: 'El use DEBE ser "official".',
+                  definition: 'Nombre registrado oficialmente en el Registro Civil',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [],
+                },
+                {
+                  id: 'Patient.contact.name.given',
+                  path: 'Patient.contact.name.given',
+                  min: 1,
+                  max: '*',
+                  short: 'Primer nombre y nombres del Contacto o Representante Legal',
+                  definition: 'Todos los nombres no necesariamente solo el Primero.',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [],
+                },
+                {
+                  id: 'Patient.contact.name.family',
+                  path: 'Patient.contact.name.family',
+                  min: 1,
+                  max: '1',
+                  short: '1er Apellido',
+                  definition:
+                    'Primer apellido registrado al nacer o inscrito legalmente en el Registro Civil.',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [
+                    {
+                      id: 'Patient.contact.name.family.extension',
+                      path: 'Patient.contact.name.family.extension',
+                      min: 0,
+                      max: '*',
+                      short: 'Extensión para 2o apellido',
+                      slicing: {
+                        discriminator: [{ path: 'url', type: 'value' }],
+                        rules: 'open',
+                        ordered: false,
+                      },
+                      definition: 'Extensión para la declaración de un segundo apellido',
+                      isModified: true,
+                      children: [
+                        {
+                          id: 'Patient.contact.name.family.extension:segundoApellido',
+                          path: 'Patient.contact.name.family.extension',
+                          sliceName: 'segundoApellido',
+                          min: 0,
+                          max: '1',
+                          short: 'Extensión segundo apellido',
+                          type: [{ code: 'Extension' }],
+                          mustSupport: true,
+                          isModified: true,
+                          children: [
+                            {
+                              id: 'Patient.contact.name.family.extension:segundoApellido.url',
+                              path: 'Patient.contact.name.family.extension.url',
+                              min: 1,
+                              max: '1',
+                              short: 'URL extensión segundo apellido',
+                              definition:
+                                'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/SegundoApellido',
+                              type: [{ code: 'uri' }],
+                              isModified: true,
+                              children: [],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'Patient.contact.extension',
+              path: 'Patient.contact.extension',
+              min: 0,
+              max: '*',
+              slicing: {
+                discriminator: [{ path: 'url', type: 'value' }],
+                rules: 'open',
+                ordered: false,
+              },
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.contact.extension:IdContacto',
+                  path: 'Patient.contact.extension',
+                  sliceName: 'IdContacto',
+                  min: 0,
+                  max: '2147483647',
+                  short: 'Identificación del Contacto',
+                  definition:
+                    'Extensión para declarar identificación del contacto y la procedencia de esta.',
+                  type: [{ code: 'Extension' }],
+                  mustSupport: true,
+                  isModified: true,
+                  children: [
+                    {
+                      id: 'Patient.contact.extension:IdContacto.url',
+                      path: 'Patient.contact.extension.url',
+                      min: 1,
+                      max: '1',
+                      short: 'URL extensión IdContacto',
+                      definition:
+                        'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/IdContacto',
+                      type: [{ code: 'uri' }],
+                      isModified: true,
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'Patient.contact.relationship',
+              path: 'Patient.contact.relationship',
+              min: 0,
+              max: '*',
+              short: 'Relación legal o de parentesco entre el contacto y el paciente',
+              binding: {
+                strength: 'required',
+                valueSet: 'https://hl7chile.cl/fhir/ig/clcore/ValueSet/VSContactoRelacion',
+                description: 'Relación entre contacto y paciente',
+              },
+              mustSupport: true,
+              isModified: true,
+              children: [
+                {
+                  id: 'Patient.contact.relationship.coding',
+                  path: 'Patient.contact.relationship.coding',
+                  min: 0,
+                  max: '*',
+                  mustSupport: true,
+                  isModified: true,
+                  children: [],
+                },
+              ],
+            },
+          ],
         },
       ],
     },
@@ -1711,6 +2612,7 @@ export const mockSearchResults = {
 export const mockProfiles: Profile[] = [
   fhirCorePatient,
   usCorePatient,
+  clCorePatient,
   observationWithSlicing,
   largeProfile,
 ];
@@ -1718,6 +2620,7 @@ export const mockProfiles: Profile[] = [
 export const mockProfilesById: Record<string, Profile> = {
   [fhirCorePatient.id]: fhirCorePatient,
   [usCorePatient.id]: usCorePatient,
+  [clCorePatient.id]: clCorePatient,
   [observationWithSlicing.id]: observationWithSlicing,
   [largeProfile.id]: largeProfile,
 };
@@ -1728,6 +2631,7 @@ export const defaultProfile = fhirCorePatient;
 // Mock SD/FSH Export
 export const mockSDExport: Record<string, string> = {
   'us-core-patient': JSON.stringify(usCorePatient, null, 2),
+  'cl-core-patient': JSON.stringify(clCorePatient, null, 2),
 };
 
 export const mockFSHExport: Record<string, string> = {
@@ -1742,6 +2646,14 @@ Description: "Defines constraints and extensions on the Patient resource..."
 * name.family 1..1 MS
 * name.given 1..* MS
 * gender 1..1 MS
+`.trim(),
+  'cl-core-patient': `
+Profile: CorePacienteCl
+Parent: Patient
+Id: cl-core-patient
+Title: "Core Paciente CL"
+Description: "Perfil core chileno para el recurso Patient (mock)."
+// Nota: generación real de FSH debe incluir slicing y constraints completos.
 `.trim(),
 };
 
@@ -1804,6 +2716,26 @@ function generateProfileFolder(params: {
 
 function createBaseProjectTree(projectId: string): ProjectTreeNode[] {
   const irRoot = makeFolder('IR', 'IR', 'IR', [
+    makeFolder('IR', 'IR/profiles', 'profiles', [
+      makeFileNode({
+        root: 'IR',
+        path: 'IR/profiles/cl-core-patient.json',
+        name: 'cl-core-patient.json',
+        resourceId: 'cl-core-patient',
+        resourceType: 'StructureDefinition',
+        resourceKind: 'profile',
+        canonicalUrl: 'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CorePacienteCl',
+      }),
+      makeFileNode({
+        root: 'IR',
+        path: 'IR/profiles/us-core-patient.json',
+        name: 'us-core-patient.json',
+        resourceId: 'us-core-patient',
+        resourceType: 'StructureDefinition',
+        resourceKind: 'profile',
+        canonicalUrl: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient',
+      }),
+    ]),
     makeFolder('IR', 'IR/input', 'input', [
       makeFileNode({
         root: 'IR',

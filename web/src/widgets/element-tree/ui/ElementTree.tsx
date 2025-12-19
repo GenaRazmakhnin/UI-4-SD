@@ -6,9 +6,11 @@ import { List } from 'react-window';
 import {
   $expandedPaths,
   $flattenedElements,
+  $sliceViews,
   $selectedElementId,
   elementSelected,
   pathToggled,
+  sliceViewChanged,
 } from '../model';
 import { ElementRow } from './ElementRow';
 import styles from './ElementRow.module.css';
@@ -18,16 +20,19 @@ export function ElementTree() {
   const elements = useUnit($flattenedElements);
   const expandedPaths = useUnit($expandedPaths);
   const selectedId = useUnit($selectedElementId);
+  const sliceViews = useUnit($sliceViews);
 
   const rowProps = useMemo(
     () => ({
       elements,
       expandedPaths,
       selectedId,
+      sliceViews,
       onSelect: elementSelected,
       onToggle: pathToggled,
+      onSliceChange: sliceViewChanged,
     }),
-    [elements, expandedPaths, selectedId]
+    [elements, expandedPaths, selectedId, sliceViews]
   );
 
   return (

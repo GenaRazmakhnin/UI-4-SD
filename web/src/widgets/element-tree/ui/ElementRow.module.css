@@ -68,9 +68,21 @@
   min-width: 0;
 }
 
+.extensionSlice {
+  color: var(--mantine-color-blue-4);
+  font-weight: 600;
+}
+
 .flags {
   display: flex;
   gap: 4px;
+}
+
+.sliceToggle {
+  margin-left: 12px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
 }
 
 .quickActions {
