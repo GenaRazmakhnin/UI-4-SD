@@ -389,7 +389,8 @@ function insertArtifact(tree: ProjectTreeNode[], artifact: CreatedArtifact): Pro
   if (!artifact.path) return tree;
 
   const rootSeg = artifact.path.split('/')[0] as ProjectTreeRoot;
-  const root: ProjectTreeRoot = rootSeg === 'IR' || rootSeg === 'SD' || rootSeg === 'FSH' ? rootSeg : 'SD';
+  const root: ProjectTreeRoot =
+    rootSeg === 'IR' || rootSeg === 'SD' || rootSeg === 'FSH' ? rootSeg : 'SD';
   const folderPath = artifact.path.split('/').slice(0, -1).join('/');
   const fileName = artifact.path.split('/').pop() || artifact.resourceId;
 

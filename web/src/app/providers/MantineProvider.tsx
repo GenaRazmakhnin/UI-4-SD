@@ -1,7 +1,7 @@
+import { mantineCssVariablesResolver, mantineTheme } from '@app/theme/mantineTheme';
 import { MantineProvider as MantineUIProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
-import { mantineCssVariablesResolver, mantineTheme } from '@app/theme/mantineTheme';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 

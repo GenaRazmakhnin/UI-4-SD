@@ -34,12 +34,14 @@
 pub mod api;
 pub mod config;
 pub mod decompiler;
+pub mod engine;
 pub mod error;
 pub mod export;
 pub mod fsh;
 pub mod import;
 pub mod ir;
 pub mod operations;
+pub mod project;
 pub mod server;
 pub mod state;
 pub mod static_files;

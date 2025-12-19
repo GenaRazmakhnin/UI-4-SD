@@ -160,6 +160,7 @@ impl BaseDefinition {
 /// resource.root.add_child(name_element);
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfiledResource {
     /// Canonical URL of this profile.
     pub url: String,

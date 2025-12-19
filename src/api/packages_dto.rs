@@ -3,7 +3,98 @@
 //! Contains request/response types and SSE event types for package operations.
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Deserialize a field that can be either a single string or a Vec<String>.
+/// This handles URL query params like `?package=foo` (single) or `?package=foo&package=bar` (multiple).
+fn deserialize_string_or_vec<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::{self, SeqAccess, Visitor};
+
+    struct StringOrVec;
+
+    impl<'de> Visitor<'de> for StringOrVec {
+        type Value = Option<Vec<String>>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string or a sequence of strings")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.deserialize_any(StringOrVecInner).map(Some)
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(vec![value.to_string()]))
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(vec![value]))
+        }
+
+        fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            StringOrVecInner.visit_seq(seq).map(Some)
+        }
+    }
+
+    struct StringOrVecInner;
+
+    impl<'de> Visitor<'de> for StringOrVecInner {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string or a sequence of strings")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(vec![value.to_string()])
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(vec![value])
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut values = Vec::new();
+            while let Some(value) = seq.next_element::<String>()? {
+                values.push(value);
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_option(StringOrVec)
+}
 
 /// Package information returned from the list endpoint.
 #[derive(Debug, Clone, Serialize)]
@@ -42,17 +133,148 @@ pub struct PackageResourceCountsDto {
     pub total: u32,
 }
 
-/// Search result from registry (not installed).
+/// Search result from registry.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageSearchResultDto {
+    /// Package identifier (name@version)
+    pub id: String,
+    /// Package name
     pub name: String,
+    /// Package version
+    pub version: String,
+    /// Package description
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// FHIR version compatibility
     pub fhir_version: String,
-    pub version: String,
+    /// Package publisher
     #[serde(skip_serializing_if = "Option::is_none")]
     pub publisher: Option<String>,
+    /// Whether the package is already installed
+    pub installed: bool,
+    /// Installed version (if different from latest)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub installed_version: Option<String>,
+    /// Download count from registry
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub download_count: Option<u64>,
+}
+
+/// Detailed package information.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageDetailsDto {
+    /// Package identifier (name@version)
+    pub id: String,
+    /// Package name
+    pub name: String,
+    /// Package version
+    pub version: String,
+    /// Package description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// FHIR version compatibility
+    pub fhir_version: String,
+    /// Package publisher
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub publisher: Option<String>,
+    /// Whether the package is installed
+    pub installed: bool,
+    /// Installation timestamp
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub installed_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// Package license
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
+    /// Package homepage URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub homepage: Option<String>,
+    /// Package repository URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repository: Option<String>,
+    /// Canonical URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canonical: Option<String>,
+    /// Resource counts by type
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_counts: Option<PackageResourceCountsDto>,
+    /// Package dependencies
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub dependencies: Vec<PackageDependencyDto>,
+    /// Available versions
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub versions: Vec<PackageVersionDto>,
+}
+
+/// Package dependency info.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageDependencyDto {
+    pub name: String,
+    pub version: String,
+}
+
+/// Package version info.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageVersionDto {
+    pub version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub published_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fhir_version: Option<String>,
+}
+
+/// Install job status (for polling-based progress).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallJobDto {
+    /// Unique job identifier
+    pub job_id: String,
+    /// Package being installed (name@version)
+    pub package_id: String,
+    /// Current status
+    pub status: InstallJobStatus,
+    /// Progress percentage (0-100)
+    pub progress: u8,
+    /// Current phase message
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Downloaded bytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub downloaded_bytes: Option<u64>,
+    /// Total bytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_bytes: Option<u64>,
+    /// Error message if failed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// Installed package info on completion
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub package: Option<PackageDto>,
+    /// Job creation time
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Last update time
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Install job status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InstallJobStatus {
+    /// Job is queued
+    Pending,
+    /// Downloading package
+    Downloading,
+    /// Extracting package contents
+    Extracting,
+    /// Indexing resources
+    Indexing,
+    /// Installation completed successfully
+    Completed,
+    /// Installation failed
+    Failed,
 }
 
 /// SSE event types for installation progress.
@@ -99,8 +321,19 @@ pub enum InstallProgressEvent {
 
 /// Query parameters for package search.
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PackageSearchQuery {
+    /// Search query text
     pub q: String,
+    /// Filter by FHIR version (e.g., "4.0.1", "5.0.0", "R4", "R5")
+    #[serde(default)]
+    pub fhir_version: Option<String>,
+    /// Sort by: "relevance", "downloads", "date"
+    #[serde(default)]
+    pub sort_by: Option<String>,
+    /// Maximum number of results
+    #[serde(default)]
+    pub limit: Option<usize>,
 }
 
 /// Query parameters for resource search.
@@ -110,10 +343,10 @@ pub struct ResourceSearchQuery {
     #[serde(default)]
     pub q: Option<String>,
     /// Resource types to filter by
-    #[serde(rename = "type", default)]
+    #[serde(rename = "type", default, deserialize_with = "deserialize_string_or_vec")]
     pub resource_type: Option<Vec<String>>,
     /// Packages to filter by
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_string_or_vec")]
     pub package: Option<Vec<String>>,
     /// FHIR version filter (e.g., "4.0.1", "5.0.0")
     #[serde(default)]
@@ -133,7 +366,7 @@ pub struct ExtensionSearchQuery {
     #[serde(default)]
     pub q: Option<String>,
     /// Packages to filter by
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_string_or_vec")]
     pub package: Option<Vec<String>>,
     /// FHIR version filter
     #[serde(default)]
@@ -159,7 +392,7 @@ pub struct ValueSetSearchQuery {
     #[serde(default)]
     pub q: Option<String>,
     /// Packages to filter by
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_string_or_vec")]
     pub package: Option<Vec<String>>,
     /// FHIR version filter
     #[serde(default)]
@@ -182,7 +415,7 @@ pub struct ProfileSearchQuery {
     #[serde(default)]
     pub q: Option<String>,
     /// Packages to filter by
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_string_or_vec")]
     pub package: Option<Vec<String>>,
     /// FHIR version filter
     #[serde(default)]
@@ -212,6 +445,43 @@ pub struct ElementSearchQuery {
     /// Maximum number of results
     #[serde(default)]
     pub limit: Option<usize>,
+}
+
+/// Query parameters for base resource search.
+#[derive(Debug, Deserialize)]
+pub struct BaseResourceSearchQuery {
+    /// Text query
+    #[serde(default)]
+    pub q: Option<String>,
+    /// Packages to filter by
+    #[serde(default, deserialize_with = "deserialize_string_or_vec")]
+    pub package: Option<Vec<String>>,
+    /// FHIR version filter
+    #[serde(default)]
+    pub fhir_version: Option<String>,
+    /// Maximum number of results
+    #[serde(default)]
+    pub limit: Option<usize>,
+}
+
+/// Base resource type information (for profile creation).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BaseResourceDto {
+    /// Resource type name (e.g., "Patient", "Observation")
+    pub name: String,
+    /// Canonical URL
+    pub url: String,
+    /// Resource title
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Resource description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Package name
+    pub package_name: String,
+    /// Package version
+    pub package_version: String,
 }
 
 /// Extension context information.

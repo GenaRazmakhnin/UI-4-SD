@@ -117,6 +117,7 @@ impl ElementSource {
 /// node.constraints_mut().cardinality = Some(Cardinality::new(1, Some(1)));
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ElementNode {
     /// Stable unique identifier for UI operations.
     pub id: NodeId,

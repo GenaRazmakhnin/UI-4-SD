@@ -7,13 +7,30 @@ import styles from './PreviewPanel.module.css';
 import { PreviewToolbar } from './PreviewToolbar';
 
 export interface SDJsonPreviewProps {
+  projectId: string;
   profileId: string;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
 }
 
-export function SDJsonPreview({ profileId, isFullscreen, onToggleFullscreen }: SDJsonPreviewProps) {
-  const { data, isLoading, error } = useSDJsonPreview(profileId);
+export function SDJsonPreview({
+  projectId,
+  profileId,
+  isFullscreen,
+  onToggleFullscreen,
+}: SDJsonPreviewProps) {
+  const { data, isLoading, error, status, fetchStatus } = useSDJsonPreview(projectId, profileId);
+
+  console.log('[SDJsonPreview] Query state:', {
+    projectId,
+    profileId,
+    status,
+    fetchStatus,
+    isLoading,
+    hasData: !!data,
+    hasContent: !!data?.content,
+    error: error?.message
+  });
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLineNumbers, setShowLineNumbers] = useState(true);

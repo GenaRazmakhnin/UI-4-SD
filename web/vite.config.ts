@@ -54,11 +54,6 @@ export default defineConfig({
   },
 
   optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      '@mantine/core',
-      '@mantine/hooks',
-    ],
+    include: ['react', 'react-dom', '@mantine/core', '@mantine/hooks'],
   },
 });

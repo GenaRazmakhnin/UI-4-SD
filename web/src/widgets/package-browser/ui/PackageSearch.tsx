@@ -25,11 +25,11 @@ import {
   $isSearching,
   $searchResults,
   filtersChanged,
-  installRequested,
   type PackageSortBy,
   packageSelected,
   registrySearchTriggered,
 } from '../model';
+import { InstallProgressModal } from './InstallProgressModal';
 import styles from './PackageSearch.module.css';
 
 interface PackageSearchProps {
@@ -40,13 +40,16 @@ export function PackageSearch({ onPackageClick }: PackageSearchProps) {
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch] = useDebouncedValue(searchInput, 300);
 
+  // Install modal state
+  const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [installingPackage, setInstallingPackage] = useState<Package | null>(null);
+
   const [
     searchResults,
     isSearching,
     filters,
     installProgress,
     onFiltersChanged,
-    onInstall,
     onPackageSelected,
     onRegistrySearch,
   ] = useUnit([
@@ -55,7 +58,6 @@ export function PackageSearch({ onPackageClick }: PackageSearchProps) {
     $filters,
     $installProgress,
     filtersChanged,
-    installRequested,
     packageSelected,
     registrySearchTriggered,
   ]);
@@ -86,9 +88,22 @@ export function PackageSearch({ onPackageClick }: PackageSearchProps) {
     onPackageClick?.(pkg);
   };
 
-  const handleInstall = (e: React.MouseEvent, packageId: string) => {
+  const handleInstall = (e: React.MouseEvent, pkg: Package) => {
     e.stopPropagation();
-    onInstall(packageId);
+    setInstallingPackage(pkg);
+    setInstallModalOpen(true);
+  };
+
+  const handleInstallComplete = (completedPkg: Package) => {
+    // Update the search results to mark the package as installed
+    // This will be handled by the React Query invalidation in the hook
+    setInstallModalOpen(false);
+    setInstallingPackage(null);
+  };
+
+  const handleInstallModalClose = () => {
+    setInstallModalOpen(false);
+    setInstallingPackage(null);
   };
 
   const formatDownloadCount = (count?: number) => {
@@ -251,7 +266,7 @@ export function PackageSearch({ onPackageClick }: PackageSearchProps) {
                         size="xs"
                         variant="filled"
                         leftSection={<IconDownload size={14} />}
-                        onClick={(e) => handleInstall(e, pkg.id)}
+                        onClick={(e) => handleInstall(e, pkg)}
                         loading={isInstalling}
                       >
                         Install
@@ -264,6 +279,15 @@ export function PackageSearch({ onPackageClick }: PackageSearchProps) {
           })}
         </Stack>
       </ScrollArea>
+
+      {/* Install Progress Modal */}
+      <InstallProgressModal
+        opened={installModalOpen}
+        packageId={installingPackage?.id || null}
+        packageName={installingPackage?.name}
+        onClose={handleInstallModalClose}
+        onComplete={handleInstallComplete}
+      />
     </Stack>
   );
 }

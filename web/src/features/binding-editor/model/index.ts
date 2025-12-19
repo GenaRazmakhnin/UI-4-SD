@@ -22,12 +22,21 @@ export const removeBinding = createEvent<{
  * Search ValueSets effect
  */
 export const searchValueSetsFx = createEffect(
-  async ({ query, codeSystemFilter }: { query: string; codeSystemFilter: string | null }) => {
-    const results = await api.search.valueSets(query, {
-      codeSystem: codeSystemFilter ? [codeSystemFilter] : undefined,
+  async ({
+    query,
+    codeSystemFilter,
+    packageFilter,
+  }: {
+    query: string;
+    codeSystemFilter?: string | null;
+    packageFilter?: string[];
+  }) => {
+    const response = await api.search.valueSets(query, {
+      system: codeSystemFilter || undefined,
+      package: packageFilter,
     });
-
-    return results;
+    // Handle both old format (array) and new format (with facets)
+    return 'results' in response ? response.results : response;
   }
 );
 

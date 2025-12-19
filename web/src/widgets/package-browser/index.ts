@@ -55,9 +55,13 @@ export {
   updateRequested,
   viewChanged,
 } from './model';
-export { PackageBrowser } from './ui/PackageBrowser';
 // Export sub-components
+export { InstallProgressModal } from './ui/InstallProgressModal';
+export { PackageBrowser } from './ui/PackageBrowser';
 export { PackageDetails } from './ui/PackageDetails';
 export { PackageList } from './ui/PackageList';
 export { PackageSearch } from './ui/PackageSearch';
 export { ResourceBrowser } from './ui/ResourceBrowser';
+export type { ResourceType } from './ui/ResourceSearchPanel';
+export { ResourceSearchPanel } from './ui/ResourceSearchPanel';
+export { UninstallConfirmModal } from './ui/UninstallConfirmModal';

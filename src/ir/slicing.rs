@@ -249,6 +249,7 @@ impl SlicingDefinition {
 ///     .with_cardinality(Cardinality::required());
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SliceNode {
     /// Stable unique identifier for UI operations.
     pub id: NodeId,

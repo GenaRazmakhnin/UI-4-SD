@@ -8,13 +8,19 @@ import styles from './PreviewPanel.module.css';
 import { PreviewToolbar } from './PreviewToolbar';
 
 export interface FSHPreviewProps {
+  projectId: string;
   profileId: string;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
 }
 
-export function FSHPreview({ profileId, isFullscreen, onToggleFullscreen }: FSHPreviewProps) {
-  const { data, isLoading, error } = useFSHPreview(profileId);
+export function FSHPreview({
+  projectId,
+  profileId,
+  isFullscreen,
+  onToggleFullscreen,
+}: FSHPreviewProps) {
+  const { data, isLoading, error } = useFSHPreview(projectId, profileId);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLineNumbers, setShowLineNumbers] = useState(true);

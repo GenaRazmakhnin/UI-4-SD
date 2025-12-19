@@ -2,13 +2,13 @@ import {
   Alert,
   Badge,
   Button,
+  Code,
   Divider,
   Group,
+  ScrollArea,
   Skeleton,
   Stack,
   Text,
-  Code,
-  ScrollArea,
 } from '@mantine/core';
 import type { ProjectTreeNode } from '@shared/types';
 import { IconHierarchy3, IconInfoCircle, IconRoute } from '@tabler/icons-react';
@@ -92,9 +92,7 @@ export function DetailsPanel({ node, isLoading, fallbackPath, onOpenProfile }: D
         <Group gap={6}>
           <IconInfoCircle size={16} className={styles.mutedIcon} />
           <Text size="sm">
-            {node.kind === 'folder'
-              ? 'Folder'
-              : node.resourceType || node.resourceKind || 'File'}
+            {node.kind === 'folder' ? 'Folder' : node.resourceType || node.resourceKind || 'File'}
           </Text>
         </Group>
 

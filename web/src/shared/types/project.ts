@@ -1,31 +1,33 @@
-import type { FhirVersion } from './profile';
 import type { PackageDependency } from './package';
+import type { FhirVersion } from './profile';
+
+export type ProjectStatus = 'draft' | 'review' | 'published' | 'archived';
 
 export interface Project {
   id: string;
   name: string;
   fhirVersion: FhirVersion;
-  templateId?: string;
+  canonicalBase: string;
+  status: ProjectStatus;
+  version: string;
   description?: string;
-  packageId?: string;
-  canonicalBase?: string;
-  version?: string;
   publisher?: string;
-  path?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  modifiedAt: string;
+  dependencies: PackageDependency[];
+  // UI-specific fields (not from backend API)
   lastOpenedAt?: string;
-  dependencies?: PackageDependency[];
+  templateId?: string;
+  packageId?: string;
+  path?: string;
 }
 
 export interface CreateProjectInput {
+  id: string;
   name: string;
-  fhirVersion: FhirVersion;
-  templateId?: string;
+  canonicalBase: string;
+  fhirVersion?: FhirVersion;
   description?: string;
-  packageId?: string;
-  canonicalBase?: string;
-  version?: string;
   publisher?: string;
   dependencies?: PackageDependency[];
 }
@@ -33,10 +35,8 @@ export interface CreateProjectInput {
 export interface UpdateProjectInput {
   name?: string;
   description?: string;
-  canonicalBase?: string;
-  packageId?: string;
-  version?: string;
   publisher?: string;
+  version?: string;
+  status?: ProjectStatus;
   dependencies?: PackageDependency[];
-  lastOpenedAt?: string;
 }

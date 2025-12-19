@@ -1,5 +1,5 @@
-import { projectSelected, useProject, useUpdateProject } from '@entities/project';
 import { usePackages } from '@entities/package/api/queries';
+import { projectSelected, useProject, useUpdateProject } from '@entities/project';
 import {
   Alert,
   Badge,
@@ -27,9 +27,9 @@ import {
   IconPackages,
   IconSquareRoundedCheck,
 } from '@tabler/icons-react';
+import { useParams } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from '@tanstack/react-router';
 
 export function ProjectDetailsPage() {
   const { projectId } = useParams({ from: '/projects/$projectId' });
@@ -141,7 +141,11 @@ export function ProjectDetailsPage() {
               We couldn&apos;t restore this project. Try again or go back to your projects list.
             </Text>
             <Group>
-              <Button variant="light" leftSection={<IconArrowLeft size={16} />} onClick={() => navigation.toProjects()}>
+              <Button
+                variant="light"
+                leftSection={<IconArrowLeft size={16} />}
+                onClick={() => navigation.toProjects()}
+              >
                 Back to projects
               </Button>
               <Button onClick={() => refetch()}>Retry</Button>
@@ -155,32 +159,32 @@ export function ProjectDetailsPage() {
   return (
     <Container size="md" py="xl">
       <Stack gap="md">
-            <Group justify="space-between" align="flex-start">
-              <Stack gap={6}>
-                <Title order={2}>{data.name}</Title>
-                <Group gap="xs">
-                  <Badge variant="light">FHIR {data.fhirVersion}</Badge>
-                  {data.templateId && <Badge variant="light">{data.templateId}</Badge>}
-                  {data.version && (
-                    <Badge variant="light" color="gray">
-                      {data.version}
-                    </Badge>
-                  )}
-                </Group>
-              </Stack>
-              <Group gap="xs">
-                <Button variant="light" onClick={() => navigation.toProjectFiles(data.id)}>
-                  Files
-                </Button>
-                <Button
-                  variant="subtle"
-                  leftSection={<IconArrowLeft size={16} />}
-                  onClick={() => navigation.toProjects()}
-                >
-                  Back to projects
-                </Button>
-              </Group>
+        <Group justify="space-between" align="flex-start">
+          <Stack gap={6}>
+            <Title order={2}>{data.name}</Title>
+            <Group gap="xs">
+              <Badge variant="light">FHIR {data.fhirVersion}</Badge>
+              {data.templateId && <Badge variant="light">{data.templateId}</Badge>}
+              {data.version && (
+                <Badge variant="light" color="gray">
+                  {data.version}
+                </Badge>
+              )}
             </Group>
+          </Stack>
+          <Group gap="xs">
+            <Button variant="light" onClick={() => navigation.toProjectFiles(data.id)}>
+              Files
+            </Button>
+            <Button
+              variant="subtle"
+              leftSection={<IconArrowLeft size={16} />}
+              onClick={() => navigation.toProjects()}
+            >
+              Back to projects
+            </Button>
+          </Group>
+        </Group>
 
         <Card withBorder radius="lg" padding="lg">
           <Stack gap="sm">
@@ -211,9 +215,9 @@ export function ProjectDetailsPage() {
               </Text>
             </Group>
 
-            {data.updatedAt && (
+            {data.modifiedAt && (
               <Text size="sm" c="dimmed">
-                Updated {formatDistanceToNow(new Date(data.updatedAt), { addSuffix: true })}
+                Updated {formatDistanceToNow(new Date(data.modifiedAt), { addSuffix: true })}
               </Text>
             )}
           </Stack>

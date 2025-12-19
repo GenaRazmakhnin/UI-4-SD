@@ -68,6 +68,14 @@ impl ValidationResult {
             .count()
     }
 
+    /// Get info count.
+    pub fn info_count(&self) -> usize {
+        self.diagnostics
+            .iter()
+            .filter(|d| d.severity == DiagnosticSeverity::Info)
+            .count()
+    }
+
     /// Get diagnostics for a specific path.
     pub fn diagnostics_for_path(&self, path: &str) -> Vec<&Diagnostic> {
         self.diagnostics

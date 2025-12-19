@@ -6,19 +6,19 @@ import {
   $selectedPath,
   collapseAll,
   expandAll,
+  type FlattenedTreeNode,
   nodeSelected,
   pathToggled,
   searchChanged,
   selectPath,
   treeLoaded,
-  type FlattenedTreeNode,
+  useProjectTree,
 } from '@entities/file-tree';
-import { useProjectTree } from '@entities/file-tree';
 import { Alert, Badge, Button, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
+import { useDebouncedValue, useDisclosure } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
 import { navigation } from '@shared/lib/navigation';
 import type { ProjectTreeNode } from '@shared/types';
-import { notifications } from '@mantine/notifications';
 import {
   IconAlertCircle,
   IconBolt,
@@ -29,13 +29,14 @@ import {
   IconRoute,
   IconSparkles,
 } from '@tabler/icons-react';
-import { createElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { useUnit } from 'effector-react';
+import { createElement, useCallback, useEffect, useMemo, useState } from 'react';
+import { useTreeKeyboard } from '../lib/useTreeKeyboard';
 import { DetailsPanel } from './DetailsPanel';
+import { ImportModal } from './ImportModal';
+import styles from './ProjectExplorer.module.css';
 import { ProjectTree } from './ProjectTree';
 import { ProjectTreeToolbar } from './ProjectTreeToolbar';
-import { useTreeKeyboard } from '../lib/useTreeKeyboard';
-import styles from './ProjectExplorer.module.css';
 
 interface ProjectExplorerProps {
   projectId: string;
@@ -57,6 +58,8 @@ export function ProjectExplorer({
 
   const [searchInput, setSearchInput] = useState(searchValue);
   const [debouncedSearch] = useDebouncedValue(searchInput, 250);
+  const [importModalOpened, { open: openImportModal, close: closeImportModal }] =
+    useDisclosure(false);
 
   // Load tree data when query resolves
   useEffect(() => {
@@ -84,33 +87,27 @@ export function ProjectExplorer({
     setSearchInput(searchValue);
   }, [searchValue]);
 
-  const handleSelect = useCallback(
-    (node: ProjectTreeNode) => {
-      nodeSelected(node);
-      if (
-        node.kind === 'file' &&
-        node.resourceKind === 'profile' &&
-        node.root === 'IR' &&
-        node.resourceId
-      ) {
-        navigation.toEditor(projectId, node.resourceId);
-      }
-    },
-    [projectId]
-  );
+  const handleSelect = useCallback((node: ProjectTreeNode) => {
+    nodeSelected(node);
+    // Just select the node to show info in DetailsPanel
+    // User clicks "Open in Profile Editor" button to navigate
+  }, []);
 
   const handleToggle = useCallback((path: string) => {
     pathToggled(path);
   }, []);
 
   const handleImport = useCallback(() => {
-    notifications.show({
-      title: 'Import',
-      message: 'Import API hook-up coming soon.',
-      icon: createElement(IconCloudUpload, { size: 16 }),
-      color: 'blue',
-    });
-  }, []);
+    openImportModal();
+  }, [openImportModal]);
+
+  const handleImported = useCallback(
+    (profileId: string) => {
+      // Navigate to the newly imported profile in the editor
+      navigation.toEditor(projectId, profileId);
+    },
+    [projectId]
+  );
 
   const handleExportSelected = useCallback(() => {
     if (!selectedNode) return;
@@ -269,6 +266,13 @@ export function ProjectExplorer({
           />
         </div>
       </div>
+
+      <ImportModal
+        opened={importModalOpened}
+        onClose={closeImportModal}
+        projectId={projectId}
+        onImported={handleImported}
+      />
     </Stack>
   );
 }

@@ -1,19 +1,27 @@
-import { ActionIcon, Paper, Tabs, Text, Tooltip } from '@mantine/core';
-import { IconArrowsMaximize, IconArrowsMinimize, IconCode } from '@tabler/icons-react';
+import { ActionIcon, Badge, Group, Paper, Stack, Tabs, Text, Tooltip } from '@mantine/core';
+import {
+  IconArrowsMaximize,
+  IconArrowsMinimize,
+  IconCode,
+  IconFlask2,
+  IconSchema,
+  IconSparkles,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { DiffView } from './DiffView';
 import { FSHPreview } from './FSHPreview';
 import styles from './PreviewPanel.module.css';
 import { SDJsonPreview } from './SDJsonPreview';
 
-export type PreviewTab = 'json' | 'fsh' | 'diff';
+export type PreviewTab = 'json' | 'fsh' | 'diff' | 'schema';
 
 export interface PreviewPanelProps {
+  projectId: string;
   profileId: string;
   baseContent?: string;
 }
 
-export function PreviewPanel({ profileId, baseContent = '' }: PreviewPanelProps) {
+export function PreviewPanel({ projectId, profileId, baseContent = '' }: PreviewPanelProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('json');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -68,10 +76,25 @@ export function PreviewPanel({ profileId, baseContent = '' }: PreviewPanelProps)
           <Tabs.Tab value="json">SD JSON</Tabs.Tab>
           <Tabs.Tab value="fsh">FSH</Tabs.Tab>
           <Tabs.Tab value="diff">Diff</Tabs.Tab>
+          <Tabs.Tab value="schema">
+            <Group gap={6}>
+              <IconSchema size={14} />
+              <span>FHIR Schema</span>
+              <Badge
+                size="xs"
+                variant="gradient"
+                gradient={{ from: 'grape', to: 'pink', deg: 135 }}
+                leftSection={<IconSparkles size={8} />}
+              >
+                Soon
+              </Badge>
+            </Group>
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="json">
           <SDJsonPreview
+            projectId={projectId}
             profileId={profileId}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
@@ -80,6 +103,7 @@ export function PreviewPanel({ profileId, baseContent = '' }: PreviewPanelProps)
 
         <Tabs.Panel value="fsh">
           <FSHPreview
+            projectId={projectId}
             profileId={profileId}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
@@ -88,13 +112,58 @@ export function PreviewPanel({ profileId, baseContent = '' }: PreviewPanelProps)
 
         <Tabs.Panel value="diff">
           <DiffView
+            projectId={projectId}
             profileId={profileId}
             baseContent={baseContent}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
           />
         </Tabs.Panel>
+
+        <Tabs.Panel value="schema">
+          <FhirSchemaPreview />
+        </Tabs.Panel>
       </Tabs>
     </Paper>
+  );
+}
+
+/** FHIR Schema preview placeholder */
+function FhirSchemaPreview() {
+  return (
+    <div className={styles.schemaPreview}>
+      <Stack align="center" justify="center" gap="lg" h="100%">
+        <div className={styles.schemaIconWrapper}>
+          <IconSchema size={48} stroke={1.5} />
+        </div>
+        <Stack align="center" gap="xs">
+          <Group gap="sm">
+            <Text size="xl" fw={600}>
+              FHIR Schema
+            </Text>
+            <Badge
+              size="lg"
+              variant="gradient"
+              gradient={{ from: 'grape', to: 'pink', deg: 135 }}
+              leftSection={<IconSparkles size={12} />}
+            >
+              Coming Soon
+            </Badge>
+          </Group>
+          <Text size="sm" c="dimmed" ta="center" maw={400}>
+            Next-generation schema validation using the official FHIR Schema format. Faster, more
+            precise, and spec-compliant validation.
+          </Text>
+        </Stack>
+        <Group gap="xs" mt="md">
+          <Badge variant="light" color="grape" leftSection={<IconFlask2 size={12} />}>
+            Experimental
+          </Badge>
+          <Badge variant="light" color="blue">
+            JSON Schema Compatible
+          </Badge>
+        </Group>
+      </Stack>
+    </div>
   );
 }

@@ -560,11 +560,21 @@ async fn import_profile(
     Path(params): Path<ProfilePath>,
     Json(req): Json<ImportProfileRequest>,
 ) -> impl IntoResponse {
-    let project_dir = state.project_path(&params.project_id);
-    let storage = ProfileStorage::new(&project_dir);
+    use crate::project::{ProjectService, ResourceKind, SourceFormat};
+    use tokio::fs;
+    use tokio::io::AsyncWriteExt;
 
-    if let Err(e) = storage.init().await {
-        return ErrorResponse::internal_error(e.to_string()).into_response();
+    let project_dir = state.project_path(&params.project_id);
+    let project_service = ProjectService::new(state.workspace_dir().clone());
+
+    // Ensure directories exist
+    let ir_resources_dir = project_dir.join("IR").join("resources");
+    let sd_dir = project_dir.join("SD").join("StructureDefinition");
+    if let Err(e) = fs::create_dir_all(&ir_resources_dir).await {
+        return ErrorResponse::internal_error(format!("Failed to create IR directory: {}", e)).into_response();
+    }
+    if let Err(e) = fs::create_dir_all(&sd_dir).await {
+        return ErrorResponse::internal_error(format!("Failed to create SD directory: {}", e)).into_response();
     }
 
     let mut diagnostics = Vec::new();
@@ -575,24 +585,12 @@ async fn import_profile(
             let importer = crate::import::StructureDefinitionImporter::new();
             match importer.import_json(&req.content).await {
                 Ok(imported_doc) => {
-                    // Determine if we're replacing or creating
-                    let doc = if req.replace {
-                        // Try to load existing and merge
-                        match storage.load_profile(&params.profile_id).await {
-                            Ok(mut existing) => {
-                                existing.resource = imported_doc.resource;
-                                existing.metadata = imported_doc.metadata;
-                                existing.mark_dirty();
-                                existing
-                            }
-                            Err(_) => imported_doc,
-                        }
-                    } else {
-                        imported_doc
-                    };
+                    // Use imported document directly (no merge with existing for now)
+                    let doc = imported_doc;
 
-                    // Save imported content
-                    if let Err(e) = storage.save_sd_json(&doc.metadata.name, &req.content).await {
+                    // Save raw SD JSON to SD folder
+                    let sd_path = sd_dir.join(format!("{}.json", doc.metadata.name));
+                    if let Err(e) = fs::write(&sd_path, &req.content).await {
                         diagnostics.push(Diagnostic {
                             severity: DiagnosticSeverity::Warning,
                             code: "SAVE_SOURCE_FAILED".to_string(),
@@ -601,9 +599,54 @@ async fn import_profile(
                         });
                     }
 
-                    // Save profile
-                    if let Err(e) = storage.save_profile(&doc).await {
-                        return ErrorResponse::internal_error(e.to_string()).into_response();
+                    // Save profile document to IR/resources
+                    let ir_path = ir_resources_dir.join(format!("{}.json", doc.metadata.id));
+                    let content = match serde_json::to_string_pretty(&doc) {
+                        Ok(c) => c,
+                        Err(e) => return ErrorResponse::internal_error(format!("Failed to serialize profile: {}", e)).into_response(),
+                    };
+                    if let Err(e) = fs::write(&ir_path, &content).await {
+                        return ErrorResponse::internal_error(format!("Failed to save profile: {}", e)).into_response();
+                    }
+
+                    // Register in project index for tree visibility
+                    let resource_kind = match doc.resource.kind {
+                        crate::ir::StructureKind::Resource | crate::ir::StructureKind::ComplexType => {
+                            // Check if it's an extension based on base definition
+                            if doc.resource.base.url.contains("Extension") {
+                                ResourceKind::Extension
+                            } else {
+                                ResourceKind::Profile
+                            }
+                        }
+                        crate::ir::StructureKind::Logical => ResourceKind::Profile,
+                        crate::ir::StructureKind::PrimitiveType => ResourceKind::Profile,
+                    };
+
+                    let add_request = crate::project::AddResourceRequest {
+                        id: Some(doc.metadata.id.clone()),
+                        name: doc.metadata.name.clone(),
+                        kind: resource_kind,
+                        canonical_url: Some(doc.metadata.url.clone()),
+                        base: Some(doc.resource.base.url.clone()),
+                        source_format: Some(SourceFormat::Sd),
+                        description: doc.metadata.description.clone(),
+                        context: None,
+                        purpose: None,
+                        content: Some(req.content.clone()),
+                    };
+
+                    // Try to add to project index, but don't fail if it already exists
+                    if let Err(e) = project_service.add_resource(&params.project_id, add_request).await {
+                        // If resource already exists, try to update it instead
+                        if !e.to_string().contains("already exists") {
+                            diagnostics.push(Diagnostic {
+                                severity: DiagnosticSeverity::Warning,
+                                code: "INDEX_UPDATE_FAILED".to_string(),
+                                message: format!("Failed to update project index: {}", e),
+                                path: None,
+                            });
+                        }
                     }
 
                     let response = ImportResponse {
@@ -622,26 +665,17 @@ async fn import_profile(
             use crate::fsh::{FshImporter, FshImportOptions};
             use crate::ir::FhirVersion;
 
-            // Load project configuration for canonical URL and FHIR version
-            let project_config = match storage.load_config().await {
-                Ok(config) => config,
+            // Load project for canonical URL and FHIR version
+            let project = match project_service.load_project(&params.project_id).await {
+                Ok(p) => p,
                 Err(e) => {
-                    diagnostics.push(Diagnostic {
-                        severity: DiagnosticSeverity::Warning,
-                        code: "CONFIG_LOAD_FAILED".to_string(),
-                        message: format!("Using defaults, config load failed: {}", e),
-                        path: None,
-                    });
-                    super::storage::ProjectConfig::default()
+                    return ErrorResponse::internal_error(format!("Failed to load project: {}", e)).into_response();
                 }
             };
 
-            let fhir_version = FhirVersion::from_str(&project_config.fhir_version)
-                .unwrap_or(FhirVersion::R4);
-
             let options = FshImportOptions::default()
-                .with_canonical_base(&project_config.canonical)
-                .with_fhir_version(fhir_version);
+                .with_canonical_base(&project.canonical_base)
+                .with_fhir_version(project.fhir_version);
 
             let importer = match FshImporter::with_options(options).await {
                 Ok(i) => i,
@@ -675,28 +709,74 @@ async fn import_profile(
                     }
 
                     // Use the first imported profile
-                    let mut doc = result.value.into_iter().next().unwrap();
-
-                    // Handle replace mode
-                    if req.replace {
-                        if let Ok(existing) = storage.load_profile(&params.profile_id).await {
-                            doc.metadata.id = existing.metadata.id;
-                        }
-                    }
+                    let doc = result.value.into_iter().next().unwrap();
 
                     // Save FSH source file
-                    if let Err(e) = storage.save_fsh(&doc.metadata.name, &req.content).await {
+                    let fsh_dir = project_dir.join("FSH");
+                    if let Err(e) = fs::create_dir_all(&fsh_dir).await {
                         diagnostics.push(Diagnostic {
                             severity: DiagnosticSeverity::Warning,
                             code: "SAVE_SOURCE_FAILED".to_string(),
-                            message: format!("Failed to save FSH source: {}", e),
+                            message: format!("Failed to create FSH directory: {}", e),
                             path: None,
                         });
+                    } else {
+                        let fsh_path = fsh_dir.join(format!("{}.fsh", doc.metadata.name));
+                        if let Err(e) = fs::write(&fsh_path, &req.content).await {
+                            diagnostics.push(Diagnostic {
+                                severity: DiagnosticSeverity::Warning,
+                                code: "SAVE_SOURCE_FAILED".to_string(),
+                                message: format!("Failed to save FSH source: {}", e),
+                                path: None,
+                            });
+                        }
                     }
 
-                    // Save profile
-                    if let Err(e) = storage.save_profile(&doc).await {
-                        return ErrorResponse::internal_error(e.to_string()).into_response();
+                    // Save profile document to IR/resources
+                    let ir_path = ir_resources_dir.join(format!("{}.json", doc.metadata.id));
+                    let content = match serde_json::to_string_pretty(&doc) {
+                        Ok(c) => c,
+                        Err(e) => return ErrorResponse::internal_error(format!("Failed to serialize profile: {}", e)).into_response(),
+                    };
+                    if let Err(e) = fs::write(&ir_path, &content).await {
+                        return ErrorResponse::internal_error(format!("Failed to save profile: {}", e)).into_response();
+                    }
+
+                    // Register in project index for tree visibility
+                    let resource_kind = match doc.resource.kind {
+                        crate::ir::StructureKind::Resource | crate::ir::StructureKind::ComplexType => {
+                            if doc.resource.base.url.contains("Extension") {
+                                ResourceKind::Extension
+                            } else {
+                                ResourceKind::Profile
+                            }
+                        }
+                        crate::ir::StructureKind::Logical => ResourceKind::Profile,
+                        crate::ir::StructureKind::PrimitiveType => ResourceKind::Profile,
+                    };
+
+                    let add_request = crate::project::AddResourceRequest {
+                        id: Some(doc.metadata.id.clone()),
+                        name: doc.metadata.name.clone(),
+                        kind: resource_kind,
+                        canonical_url: Some(doc.metadata.url.clone()),
+                        base: Some(doc.resource.base.url.clone()),
+                        source_format: Some(SourceFormat::Fsh),
+                        description: doc.metadata.description.clone(),
+                        context: None,
+                        purpose: None,
+                        content: None, // FSH content already saved separately
+                    };
+
+                    if let Err(e) = project_service.add_resource(&params.project_id, add_request).await {
+                        if !e.to_string().contains("already exists") {
+                            diagnostics.push(Diagnostic {
+                                severity: DiagnosticSeverity::Warning,
+                                code: "INDEX_UPDATE_FAILED".to_string(),
+                                message: format!("Failed to update project index: {}", e),
+                                path: None,
+                            });
+                        }
                     }
 
                     let response = ImportResponse {

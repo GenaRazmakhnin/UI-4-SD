@@ -15,9 +15,10 @@ use axum::{
 use crate::state::AppState;
 
 use super::packages_dto::{
-    ElementDto, ElementSearchQuery, ExtensionContextDto, ExtensionDto, ExtensionSearchQuery,
-    FacetsDto, PackageErrorResponse, ProfileDto, ProfileSearchQuery, ResourceSearchQuery,
-    SearchResponseWithFacets, SearchResultDto, ValueSetDto, ValueSetSearchQuery,
+    BaseResourceDto, BaseResourceSearchQuery, ElementDto, ElementSearchQuery, ExtensionContextDto,
+    ExtensionDto, ExtensionSearchQuery, FacetsDto, PackageErrorResponse, ProfileDto,
+    ProfileSearchQuery, ResourceSearchQuery, SearchResponseWithFacets, SearchResultDto,
+    ValueSetDto, ValueSetSearchQuery,
 };
 
 /// Create resource search routes.
@@ -28,6 +29,7 @@ pub fn search_routes() -> Router<AppState> {
         .route("/resources", get(search_resources))
         .route("/profiles", get(search_profiles))
         .route("/elements", get(search_elements))
+        .route("/base-resources", get(search_base_resources))
 }
 
 /// Extract extension contexts from a StructureDefinition.
@@ -771,6 +773,83 @@ async fn search_resources(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(PackageErrorResponse::install_failed(format!(
                 "Search failed: {e}"
+            ))),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /api/search/base-resources - Get available base FHIR resource types for profile creation.
+/// Uses fast index-only query without loading full resource content.
+async fn search_base_resources(
+    State(state): State<AppState>,
+    Query(query): Query<BaseResourceSearchQuery>,
+) -> Response {
+    let manager = match state.canonical_manager().await {
+        Ok(m) => m,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(PackageErrorResponse::install_failed(format!(
+                    "Failed to initialize package manager: {e}"
+                ))),
+            )
+                .into_response();
+        }
+    };
+
+    // Determine the FHIR version to use
+    let fhir_version = query.fhir_version.as_deref().unwrap_or("4.0.1");
+
+    // Use fast index-only query to get base resource type names
+    match manager.list_base_resource_type_names(fhir_version).await {
+        Ok(type_names) => {
+            let limit = query.limit.unwrap_or(200);
+            let text_filter = query.q.as_ref().map(|q| q.to_lowercase());
+
+            // Filter by text query if provided and build response
+            let mut resources: Vec<BaseResourceDto> = type_names
+                .into_iter()
+                .filter(|name| {
+                    // Skip Extension type
+                    if name == "Extension" {
+                        return false;
+                    }
+                    // Apply text filter if provided
+                    if let Some(ref filter) = text_filter {
+                        return name.to_lowercase().contains(filter);
+                    }
+                    true
+                })
+                .map(|name| {
+                    // Build canonical URL from type name
+                    let url = format!("http://hl7.org/fhir/StructureDefinition/{}", name);
+                    BaseResourceDto {
+                        name: name.clone(),
+                        url,
+                        title: Some(name.clone()), // Use name as title for base resources
+                        description: None,         // Skip description for fast response
+                        package_name: format!("hl7.fhir.r4.core"), // Core package
+                        package_version: fhir_version.to_string(),
+                    }
+                })
+                .collect();
+
+            // Sort alphabetically
+            resources.sort_by(|a, b| a.name.cmp(&b.name));
+            resources.truncate(limit);
+
+            Json(SearchResponseWithFacets {
+                total_count: resources.len(),
+                results: resources,
+                facets: None,
+            })
+            .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(PackageErrorResponse::install_failed(format!(
+                "Failed to list base resources: {e}"
             ))),
         )
             .into_response(),

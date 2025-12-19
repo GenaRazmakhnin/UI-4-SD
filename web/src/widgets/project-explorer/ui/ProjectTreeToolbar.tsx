@@ -1,5 +1,10 @@
 import { ActionIcon, Group, TextInput, Tooltip } from '@mantine/core';
-import { IconArrowsMinimize, IconArrowsMaximize, IconRefresh, IconSearch } from '@tabler/icons-react';
+import {
+  IconArrowsMaximize,
+  IconArrowsMinimize,
+  IconRefresh,
+  IconSearch,
+} from '@tabler/icons-react';
 import styles from './ProjectExplorer.module.css';
 
 interface ProjectTreeToolbarProps {

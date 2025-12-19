@@ -7,11 +7,21 @@ import { createEffect, createEvent, createStore, sample } from 'effector';
  * Search extensions effect
  */
 export const searchExtensionsFx = createEffect(
-  async ({ query, packageFilter }: { query: string; packageFilter?: string[] }) => {
-    const results = await api.search.extensions(query, {
+  async ({
+    query,
+    packageFilter,
+    contextPath,
+  }: {
+    query: string;
+    packageFilter?: string[];
+    contextPath?: string;
+  }) => {
+    const response = await api.search.extensions(query, {
       package: packageFilter,
+      contextPath,
     });
-    return results;
+    // Handle both old format (array) and new format (with facets)
+    return 'results' in response ? response.results : response;
   }
 );
 

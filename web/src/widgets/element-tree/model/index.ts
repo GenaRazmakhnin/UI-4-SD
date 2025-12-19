@@ -1,5 +1,4 @@
 import { api } from '@shared/api';
-import { usCorePatient } from '@shared/api/mock/fixtures';
 import type { ElementNode } from '@shared/types';
 import { combine, createEffect, createEvent, createStore, sample } from 'effector';
 import { persist } from 'effector-storage/local';
@@ -12,16 +11,35 @@ export interface FilterOptions {
   searchQuery: string;
 }
 
+// Profile loading params
+export interface LoadProfileParams {
+  projectId: string;
+  profileId: string;
+}
+
+// Current profile context
+export interface ProfileContext {
+  projectId: string;
+  profileId: string;
+  profileName: string;
+  isDirty: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
 // Stores
-export const $elementTree = createStore<ElementNode[]>(usCorePatient.elements);
+export const $elementTree = createStore<ElementNode[]>([]);
+export const $profileContext = createStore<ProfileContext | null>(null);
 export const $selectedElementId = createStore<string | null>(null);
-export const $expandedPaths = createStore<Set<string>>(new Set(['Patient']));
+export const $expandedPaths = createStore<Set<string>>(new Set());
 export const $filterOptions = createStore<FilterOptions>({
   modifiedOnly: false,
   errorsOnly: false,
   mustSupportOnly: false,
   searchQuery: '',
 });
+export const $isLoading = createStore(false);
+export const $loadError = createStore<string | null>(null);
 
 // Events
 export const elementSelected = createEvent<ElementNode>();
@@ -32,15 +50,62 @@ export const expandAll = createEvent();
 export const collapseAll = createEvent();
 export const searchQueryChanged = createEvent<string>();
 export const treeLoaded = createEvent<ElementNode[]>();
+export const profileContextUpdated = createEvent<Partial<ProfileContext>>();
+export const clearProfile = createEvent();
 
 // Effects
-export const loadElementTreeFx = createEffect<string, ElementNode[]>(async (profileId) => {
-  if (profileId === 'us-core-patient') {
-    return usCorePatient.elements;
-  }
-  const response = await api.profiles.get(profileId);
-  return response.elements;
+export const loadProfileFx = createEffect<
+  LoadProfileParams,
+  { elements: ElementNode[]; context: ProfileContext }
+>(async ({ projectId, profileId }) => {
+  // Use the project-scoped profile API
+  const response = await api.projects.getProfile(projectId, profileId);
+
+  // Transform the response - backend returns root element with children
+  const elements = response.resource?.root ? [transformElementNode(response.resource.root)] : [];
+
+  const context: ProfileContext = {
+    projectId,
+    profileId,
+    profileName: response.metadata?.name || profileId,
+    isDirty: response.isDirty ?? false,
+    canUndo: response.history?.canUndo ?? false,
+    canRedo: response.history?.canRedo ?? false,
+  };
+
+  return { elements, context };
 });
+
+// Transform backend ElementNode to frontend format
+function transformElementNode(node: any): ElementNode {
+  return {
+    id: node.id || node.path,
+    path: node.path,
+    sliceName: node.sliceName,
+    min: node.constraints?.cardinality?.min ?? node.min ?? 0,
+    max: node.constraints?.cardinality?.max?.toString() ?? node.max ?? '*',
+    type: node.constraints?.types?.map((t: any) => ({
+      code: t.code,
+      profile: t.profile,
+      targetProfile: t.targetProfile,
+    })),
+    binding: node.constraints?.binding
+      ? {
+          strength: node.constraints.binding.strength,
+          valueSet: node.constraints.binding.valueSet,
+          description: node.constraints.binding.description,
+        }
+      : undefined,
+    mustSupport: node.constraints?.flags?.mustSupport ?? node.mustSupport,
+    isModifier: node.constraints?.flags?.isModifier ?? node.isModifier,
+    isSummary: node.constraints?.flags?.isSummary ?? node.isSummary,
+    short: node.constraints?.short ?? node.short,
+    definition: node.constraints?.definition ?? node.definition,
+    comment: node.constraints?.comment ?? node.comment,
+    isModified: node.source === 'Modified' || node.isModified === true,
+    children: (node.children || []).map(transformElementNode),
+  };
+}
 
 // Derived stores
 export const $selectedElement = combine(
@@ -62,7 +127,15 @@ export const $selectedElement = combine(
 );
 
 export const $filteredTree = combine($elementTree, $filterOptions, (tree, filters) => {
-  const filterNode = (node: ElementNode): boolean => {
+  // Check if any filter is active
+  const hasActiveFilters = filters.modifiedOnly || filters.mustSupportOnly || filters.searchQuery;
+
+  if (!hasActiveFilters) {
+    return tree;
+  }
+
+  // Check if a node matches the filter criteria
+  const matchesFilter = (node: ElementNode): boolean => {
     if (filters.modifiedOnly && !node.isModified) return false;
     if (filters.mustSupportOnly && !node.mustSupport) return false;
     if (
@@ -74,8 +147,15 @@ export const $filteredTree = combine($elementTree, $filterOptions, (tree, filter
     return true;
   };
 
+  // Check if a node or any of its descendants match the filter
+  const hasMatchingDescendant = (node: ElementNode): boolean => {
+    if (matchesFilter(node)) return true;
+    return node.children.some(hasMatchingDescendant);
+  };
+
+  // Filter tree, keeping parent nodes if any descendants match
   const filterTree = (nodes: ElementNode[]): ElementNode[] => {
-    return nodes.filter(filterNode).map((node) => ({
+    return nodes.filter(hasMatchingDescendant).map((node) => ({
       ...node,
       children: filterTree(node.children),
     }));
@@ -133,8 +213,38 @@ $filterOptions.on(searchQueryChanged, (current, query) => ({
   searchQuery: query,
 }));
 
-$elementTree.on(loadElementTreeFx.doneData, (_, tree) => tree);
+// Handle profile loading
+$isLoading.on(loadProfileFx.pending, (_, pending) => pending);
+$loadError.on(loadProfileFx.failData, (_, error) => error.message);
+$loadError.reset(loadProfileFx);
+
+$elementTree.on(loadProfileFx.doneData, (_, { elements }) => elements);
 $elementTree.on(treeLoaded, (_, tree) => tree);
+$elementTree.reset(clearProfile);
+
+$profileContext.on(loadProfileFx.doneData, (_, { context }) => context);
+$profileContext.on(profileContextUpdated, (current, updates) =>
+  current ? { ...current, ...updates } : null
+);
+$profileContext.reset(clearProfile);
+
+// Expand root path when profile loads
+sample({
+  clock: loadProfileFx.doneData,
+  fn: ({ elements }) => {
+    const paths = new Set<string>();
+    // Expand root element by default
+    if (elements.length > 0) {
+      paths.add(elements[0].path);
+    }
+    return paths;
+  },
+  target: $expandedPaths,
+});
+
+// Clear selection when profile changes
+$selectedElementId.reset(clearProfile);
+$selectedElementId.reset(loadProfileFx);
 
 // Persist expanded paths to localStorage
 persist({

@@ -26,7 +26,7 @@ use tower_http::{
 use crate::{
     api::{
         export_routes, history_routes, package_routes, profile_routes, project_export_routes,
-        search_routes, validation_routes,
+        project_routes, search_routes, validation_routes,
     },
     state::AppState,
     static_files::{has_embedded_assets, serve_static},
@@ -62,7 +62,8 @@ impl Server {
         // API routes
         let api_routes = Router::new()
             .route("/status", get(status))
-            .route("/projects", get(list_projects))
+            // Project management routes (includes list)
+            .nest("/projects", project_routes())
             // Profile routes with export, validation, and history
             .nest(
                 "/projects/{projectId}/profiles",
@@ -209,30 +210,6 @@ async fn status(State(state): State<AppState>) -> Json<serde_json::Value> {
         "status": "running",
         "uptime_seconds": state.uptime_seconds(),
         "active_sessions": state.active_sessions().len()
-    }))
-}
-
-/// List projects endpoint (placeholder).
-async fn list_projects(State(state): State<AppState>) -> Json<serde_json::Value> {
-    // List project directories in workspace
-    let workspace = state.workspace_dir();
-    let mut projects = Vec::new();
-
-    if let Ok(entries) = std::fs::read_dir(workspace) {
-        for entry in entries.flatten() {
-            if entry.path().is_dir() {
-                if let Some(name) = entry.file_name().to_str() {
-                    projects.push(serde_json::json!({
-                        "id": name,
-                        "path": entry.path().display().to_string()
-                    }));
-                }
-            }
-        }
-    }
-
-    Json(serde_json::json!({
-        "projects": projects
     }))
 }
 

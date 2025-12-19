@@ -1,5 +1,15 @@
 import { projectSelected, useCreateProject } from '@entities/project';
-import { Badge, Button, Group, Modal, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import {
+  Badge,
+  Button,
+  Group,
+  Modal,
+  Select,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+} from '@mantine/core';
 import { useForm } from '@mantine/form';
 import type { FhirVersion, Project } from '@shared/types';
 import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
@@ -18,6 +28,14 @@ const TEMPLATE_OPTIONS = [
   { value: 'research', label: 'Research starter' },
 ];
 
+/** Generate a URL-safe slug from a string */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 interface CreateProjectModalProps {
   opened: boolean;
   onClose: () => void;
@@ -31,12 +49,22 @@ export function CreateProjectModal({ opened, onClose, onCreated }: CreateProject
   const form = useForm({
     initialValues: {
       name: '',
+      canonicalBase: '',
       fhirVersion: '4.0.1' as FhirVersion,
       templateId: 'blank',
       description: '',
     },
     validate: {
       name: (value) => (value.trim().length === 0 ? 'Project name is required' : null),
+      canonicalBase: (value) => {
+        if (!value.trim()) return 'Canonical base URL is required';
+        try {
+          new URL(value);
+          return null;
+        } catch {
+          return 'Must be a valid URL';
+        }
+      },
       fhirVersion: (value) => (!value ? 'Select a FHIR version' : null),
     },
   });
@@ -64,10 +92,13 @@ export function CreateProjectModal({ opened, onClose, onCreated }: CreateProject
 
   const handleSubmit = form.onSubmit(async (values) => {
     try {
+      const name = values.name.trim();
+      const id = slugify(name) || `project-${Date.now()}`;
       const project = await mutateAsync({
-        name: values.name.trim(),
+        id,
+        name,
+        canonicalBase: values.canonicalBase.trim(),
         fhirVersion: values.fhirVersion,
-        templateId: values.templateId || undefined,
         description: values.description.trim() || undefined,
       });
 
@@ -99,6 +130,14 @@ export function CreateProjectModal({ opened, onClose, onCreated }: CreateProject
             required
             data-autofocus
             {...form.getInputProps('name')}
+          />
+
+          <TextInput
+            label="Canonical base URL"
+            placeholder="http://example.org/fhir"
+            description="Base URL for all resources in this project"
+            required
+            {...form.getInputProps('canonicalBase')}
           />
 
           <Select

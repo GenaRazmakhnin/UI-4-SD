@@ -1,11 +1,10 @@
-import { Container } from '@mantine/core';
-import { useParams } from '@tanstack/react-router';
-import { $selectedPath, selectPath } from '@entities/file-tree';
-import { useUnit } from 'effector-react';
-import { ProjectExplorer } from '@widgets/project-explorer';
+import { $selectedPath, artifactAdded, selectPath } from '@entities/file-tree';
 import { CreateArtifactModal } from '@features/project/create-artifact';
+import { Container } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { artifactAdded } from '@entities/file-tree';
+import { useParams } from '@tanstack/react-router';
+import { ProjectExplorer } from '@widgets/project-explorer';
+import { useUnit } from 'effector-react';
 
 export function ProjectTreePage() {
   const { projectId } = useParams({ from: '/projects/$projectId/tree' });

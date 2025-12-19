@@ -347,6 +347,7 @@ impl ElementFlags {
 
 /// Complete set of constraints for an element.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ElementConstraints {
     /// Cardinality constraint.
     #[serde(skip_serializing_if = "Option::is_none")]

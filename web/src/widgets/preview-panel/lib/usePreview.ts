@@ -7,30 +7,61 @@ import { useCallback, useMemo, useState } from 'react';
  */
 export const previewKeys = {
   all: ['preview'] as const,
-  sd: (profileId: string) => [...previewKeys.all, 'sd', profileId] as const,
-  fsh: (profileId: string) => [...previewKeys.all, 'fsh', profileId] as const,
+  sd: (projectId: string, profileId: string) =>
+    [...previewKeys.all, 'sd', projectId, profileId] as const,
+  fsh: (projectId: string, profileId: string) =>
+    [...previewKeys.all, 'fsh', projectId, profileId] as const,
 };
+
+/** Normalized preview data for components */
+export interface PreviewData {
+  content: string;
+  filename: string;
+}
 
 /**
  * Hook for fetching SD JSON preview
+ * Transforms API response to component-friendly format
  */
-export function useSDJsonPreview(profileId: string) {
+export function useSDJsonPreview(projectId: string, profileId: string) {
   return useQuery({
-    queryKey: previewKeys.sd(profileId),
-    queryFn: () => api.export.toSD(profileId),
-    enabled: !!profileId,
+    queryKey: previewKeys.sd(projectId, profileId),
+    queryFn: async (): Promise<PreviewData> => {
+      console.log('[useSDJsonPreview] Fetching SD for:', { projectId, profileId });
+      const response = await api.export.toSD(projectId, profileId);
+      console.log('[useSDJsonPreview] Raw API response:', response);
+      // Transform: content is JSON object, stringify it for display
+      const content =
+        typeof response.content === 'string'
+          ? response.content
+          : JSON.stringify(response.content, null, 2);
+      const result = {
+        content,
+        filename: response.metadata?.filename ?? `${profileId}.json`,
+      };
+      console.log('[useSDJsonPreview] Transformed result:', result);
+      return result;
+    },
+    enabled: !!projectId && !!profileId,
     staleTime: 30 * 1000, // 30 seconds - preview should be relatively fresh
   });
 }
 
 /**
  * Hook for fetching FSH preview
+ * Transforms API response to component-friendly format
  */
-export function useFSHPreview(profileId: string) {
+export function useFSHPreview(projectId: string, profileId: string) {
   return useQuery({
-    queryKey: previewKeys.fsh(profileId),
-    queryFn: () => api.export.toFSH(profileId),
-    enabled: !!profileId,
+    queryKey: previewKeys.fsh(projectId, profileId),
+    queryFn: async (): Promise<PreviewData> => {
+      const response = await api.export.toFSH(projectId, profileId);
+      return {
+        content: response.content,
+        filename: response.metadata?.filename ?? `${profileId}.fsh`,
+      };
+    },
+    enabled: !!projectId && !!profileId,
     staleTime: 30 * 1000,
   });
 }

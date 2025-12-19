@@ -13,11 +13,11 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { navigation } from '@shared/lib/navigation';
+import type { Project } from '@shared/types';
 import { IconArrowBackUp, IconChevronDown, IconPlus, IconRefresh } from '@tabler/icons-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useMemo } from 'react';
 import { useUnit } from 'effector-react';
-import type { Project } from '@shared/types';
+import { useMemo } from 'react';
 
 export function ProjectSwitcher() {
   const currentProject = useUnit($currentProject);

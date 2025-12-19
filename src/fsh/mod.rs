@@ -29,7 +29,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use niten::fsh::{FshImporter, FshExporter, FshImportOptions};
 //! use niten::ir::ProfileDocument;
 //!

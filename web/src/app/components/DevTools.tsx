@@ -5,7 +5,5 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 export function DevTools() {
   if (!ENV.isDev) return null;
 
-  return (
-    <ReactQueryDevtools initialIsOpen={false}  buttonPosition="bottom-left" />
-  );
+  return <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />;
 }

@@ -135,6 +135,18 @@ export function ResourceBrowser({ packageId, onSelectResource }: ResourceBrowser
         />
       </Group>
 
+      <Group px="sm" justify="space-between">
+        <Text size="xs" c="dimmed" truncate title={packageId} style={{ maxWidth: 320 }}>
+          {resources.length.toLocaleString()} resource{resources.length !== 1 ? 's' : ''} in{' '}
+          {packageId}
+        </Text>
+        {filters.type !== 'all' && (
+          <Badge size="xs" variant="light">
+            {filters.type}
+          </Badge>
+        )}
+      </Group>
+
       {/* Resource list */}
       <ScrollArea style={{ flex: 1 }} offsetScrollbars>
         {resources.length === 0 ? (

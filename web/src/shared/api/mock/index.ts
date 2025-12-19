@@ -1,19 +1,28 @@
 import type {
-  ElementNode,
-  ExportResult,
-  Package,
-  Profile,
-  CreateProjectInput,
-  UpdateProjectInput,
-  Project,
-  ProjectTreeNode,
+  BaseResource,
+  BulkExportResponse,
   CreateArtifactInput,
   CreatedArtifact,
+  CreateProjectInput,
+  ElementNode,
+  ElementSearchResult,
+  ExportResult,
+  FshExportResponse,
+  ImportProfileRequest,
+  ImportProfileResponse,
+  Package,
+  PreviewResponse,
+  Profile,
+  Project,
+  ProjectResourceMetadata,
+  ProjectTreeNode,
+  SdExportResponse,
   SearchFilters,
   SearchResult,
+  UpdateProjectInput,
   ValidationResult,
-  ProjectResourceMetadata,
 } from '@shared/types';
+import type { DependencyGraph } from '../projects';
 import * as fixtures from './fixtures';
 import { simulateDelay, simulateError } from './utils';
 
@@ -64,16 +73,16 @@ export const mockApi = {
 
       const lastOpenedAt = new Date().toISOString();
       project.lastOpenedAt = lastOpenedAt;
-      project.updatedAt = project.updatedAt || lastOpenedAt;
+      project.modifiedAt = project.modifiedAt || lastOpenedAt;
 
       return { ...project };
     },
 
-  async create(input: CreateProjectInput): Promise<Project> {
-    await simulateDelay(250, 500);
-    if (simulateError(0.08)) {
-      throw new Error('Failed to create project');
-    }
+    async create(input: CreateProjectInput): Promise<Project> {
+      await simulateDelay(250, 500);
+      if (simulateError(0.08)) {
+        throw new Error('Failed to create project');
+      }
 
       const project = fixtures.createMockProject({
         name: input.name.trim(),
@@ -101,7 +110,7 @@ export const mockApi = {
         ...project,
         ...payload,
         dependencies: payload.dependencies ?? project.dependencies ?? [],
-        updatedAt: new Date().toISOString(),
+        modifiedAt: new Date().toISOString(),
       };
 
       fixtures.mockProjectsById[id] = updated;
@@ -134,6 +143,16 @@ export const mockApi = {
       const tree = fixtures.mockProjectTrees[projectId] ?? fixtures.mockProjectTrees.default;
       const result = fixtures.addMockArtifact(projectId, tree, input);
       return { ...result };
+    },
+
+    async dependencies(_projectId: string): Promise<DependencyGraph> {
+      await simulateDelay(100, 250);
+      // Return empty dependency graph for mock
+      return {
+        roots: [],
+        nodes: [],
+        edges: [],
+      };
     },
   },
 
@@ -246,6 +265,42 @@ export const mockApi = {
       profile.isDirty = true;
 
       return profile;
+    },
+
+    /** Import a profile from SD JSON or FSH content (mock) */
+    async import(
+      _projectId: string,
+      profileId: string,
+      request: ImportProfileRequest
+    ): Promise<ImportProfileResponse> {
+      await simulateDelay(300, 600);
+
+      // Parse content to extract name if JSON
+      let name = profileId;
+      let url = `http://example.org/fhir/StructureDefinition/${profileId}`;
+      let baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Patient';
+
+      if (request.format === 'json') {
+        try {
+          const parsed = JSON.parse(request.content);
+          name = parsed.name || parsed.id || profileId;
+          url = parsed.url || url;
+          baseDefinition = parsed.baseDefinition || baseDefinition;
+        } catch {
+          // Use defaults
+        }
+      }
+
+      return {
+        profile: {
+          id: profileId,
+          name,
+          url,
+          status: 'draft',
+          baseDefinition,
+        },
+        diagnostics: [],
+      };
     },
   },
 
@@ -426,6 +481,93 @@ export const mockApi = {
         return matchesText && matchesCodeSystem;
       });
     },
+
+    async baseResources(options?: {
+      query?: string;
+      package?: string[];
+      fhirVersion?: string;
+      limit?: number;
+    }): Promise<BaseResource[]> {
+      await simulateDelay(100, 250);
+      const lowerQuery = options?.query?.toLowerCase() || '';
+      const limit = options?.limit || 200;
+
+      return fixtures.mockBaseResources
+        .filter((r) => {
+          if (!lowerQuery) return true;
+          return (
+            r.name.toLowerCase().includes(lowerQuery) ||
+            r.title?.toLowerCase().includes(lowerQuery) ||
+            r.description?.toLowerCase().includes(lowerQuery)
+          );
+        })
+        .slice(0, limit);
+    },
+
+    async elements(
+      _profileId: string,
+      options?: { query?: string; limit?: number }
+    ): Promise<ElementSearchResult[]> {
+      await simulateDelay(100, 250);
+      const lowerQuery = options?.query?.toLowerCase() || '';
+      const limit = options?.limit || 100;
+
+      // Return mock elements based on Patient profile
+      const mockElements: ElementSearchResult[] = [
+        { path: 'Patient', types: ['Patient'], short: 'Patient resource' },
+        {
+          path: 'Patient.identifier',
+          types: ['Identifier'],
+          min: 0,
+          max: '*',
+          short: 'An identifier for this patient',
+        },
+        {
+          path: 'Patient.name',
+          types: ['HumanName'],
+          min: 0,
+          max: '*',
+          short: 'A name associated with the patient',
+        },
+        {
+          path: 'Patient.birthDate',
+          types: ['date'],
+          min: 0,
+          max: '1',
+          short: 'The date of birth for the individual',
+        },
+        {
+          path: 'Patient.gender',
+          types: ['code'],
+          min: 0,
+          max: '1',
+          short: 'male | female | other | unknown',
+        },
+        {
+          path: 'Patient.address',
+          types: ['Address'],
+          min: 0,
+          max: '*',
+          short: 'An address for the individual',
+        },
+        {
+          path: 'Patient.telecom',
+          types: ['ContactPoint'],
+          min: 0,
+          max: '*',
+          short: 'A contact detail for the individual',
+        },
+      ];
+
+      return mockElements
+        .filter((e) => {
+          if (!lowerQuery) return true;
+          return (
+            e.path.toLowerCase().includes(lowerQuery) || e.short?.toLowerCase().includes(lowerQuery)
+          );
+        })
+        .slice(0, limit);
+    },
   },
 
   terminology: {
@@ -442,18 +584,108 @@ export const mockApi = {
     },
   },
 
+  // Project-scoped validation
   validation: {
-    async validate(profileId: string): Promise<ValidationResult> {
-      await simulateDelay(500, 1000); // Validation takes longer
+    async validate(_projectId: string, profileId: string): Promise<ValidationResult> {
+      await simulateDelay(500, 1000);
       if (simulateError(0.05)) {
         throw new Error('Validation service unavailable');
       }
       return fixtures.mockValidationResults[profileId] || fixtures.defaultValidationResult;
     },
+
+    async quickValidate(_projectId: string, profileId: string): Promise<ValidationResult> {
+      await simulateDelay(200, 400);
+      return fixtures.mockValidationResults[profileId] || fixtures.defaultValidationResult;
+    },
+
+    async getResults(_projectId: string, profileId: string): Promise<ValidationResult> {
+      await simulateDelay(100, 200);
+      return fixtures.mockValidationResults[profileId] || fixtures.defaultValidationResult;
+    },
+
+    async applyFix(_projectId: string, profileId: string, _fixId: string): Promise<Profile> {
+      await simulateDelay(200, 400);
+      return fixtures.mockProfilesById[profileId] || fixtures.defaultProfile;
+    },
   },
 
+  // Project-scoped export
   export: {
-    async toSD(profileId: string): Promise<ExportResult> {
+    async toSD(_projectId: string, profileId: string): Promise<SdExportResponse> {
+      await simulateDelay(300, 600);
+      const content = JSON.parse(fixtures.mockSDExport[profileId] || '{}');
+      return {
+        content,
+        metadata: {
+          resourceId: profileId,
+          name: profileId,
+          url: `http://example.org/fhir/StructureDefinition/${profileId}`,
+          fhirVersion: '4.0.1',
+          filename: `${profileId}.json`,
+          contentType: 'application/fhir+json',
+          etag: 'mock-etag-123',
+        },
+      };
+    },
+
+    async toFSH(_projectId: string, profileId: string): Promise<FshExportResponse> {
+      await simulateDelay(300, 600);
+      return {
+        content: fixtures.mockFSHExport[profileId] || `Profile: ${profileId}\nParent: Patient`,
+        metadata: {
+          resourceId: profileId,
+          name: profileId,
+          url: `http://example.org/fhir/StructureDefinition/${profileId}`,
+          fhirVersion: '4.0.1',
+          filename: `${profileId}.fsh`,
+          contentType: 'text/plain; charset=utf-8',
+          etag: 'mock-etag-456',
+        },
+      };
+    },
+
+    async preview(
+      _projectId: string,
+      profileId: string,
+      options?: { format?: 'sd' | 'fsh' }
+    ): Promise<PreviewResponse> {
+      await simulateDelay(200, 400);
+      const format = options?.format || 'sd';
+      const content =
+        format === 'sd'
+          ? JSON.stringify(JSON.parse(fixtures.mockSDExport[profileId] || '{}'), null, 2)
+          : fixtures.mockFSHExport[profileId] || `Profile: ${profileId}\nParent: Patient`;
+      return {
+        content,
+        format,
+        highlighting: { language: format === 'sd' ? 'json' : 'fsh', tokens: [] },
+      };
+    },
+
+    async bulkExport(projectId: string): Promise<BulkExportResponse> {
+      await simulateDelay(500, 1000);
+      return {
+        projectId,
+        files: [],
+        summary: {
+          totalResources: 0,
+          successCount: 0,
+          failedCount: 0,
+          skippedCount: 0,
+          formats: ['sd'],
+        },
+      };
+    },
+
+    async downloadPackage(_projectId: string): Promise<string> {
+      await simulateDelay(500, 1000);
+      // Return a mock blob URL
+      return 'blob:mock-package-url';
+    },
+
+    // Legacy methods
+    async toSDLegacy(profileId: string): Promise<ExportResult> {
       await simulateDelay(300, 600);
       return {
         format: 'json',
@@ -462,7 +694,7 @@ export const mockApi = {
       };
     },
 
-    async toFSH(profileId: string): Promise<ExportResult> {
+    async toFSHLegacy(profileId: string): Promise<ExportResult> {
       await simulateDelay(300, 600);
       return {
         format: 'fsh',
@@ -472,6 +704,33 @@ export const mockApi = {
     },
   },
 
+  // Project-scoped history
+  history: {
+    async undo(_projectId: string, profileId: string): Promise<Profile> {
+      await simulateDelay(100, 200);
+      return fixtures.mockProfilesById[profileId] || fixtures.defaultProfile;
+    },
+
+    async redo(_projectId: string, profileId: string): Promise<Profile> {
+      await simulateDelay(100, 200);
+      return fixtures.mockProfilesById[profileId] || fixtures.defaultProfile;
+    },
+
+    async getHistory(
+      _projectId: string,
+      _profileId: string
+    ): Promise<{ operations: unknown[]; currentIndex: number }> {
+      await simulateDelay(100, 200);
+      return { operations: [], currentIndex: 0 };
+    },
+
+    async gotoHistory(_projectId: string, profileId: string, _index: number): Promise<Profile> {
+      await simulateDelay(100, 200);
+      return fixtures.mockProfilesById[profileId] || fixtures.defaultProfile;
+    },
+  },
+
+  // Legacy undo API
   undo: {
     async canUndo(profileId: string): Promise<boolean> {
       await simulateDelay(50, 100);
@@ -485,14 +744,12 @@ export const mockApi = {
 
     async undo(profileId: string): Promise<Profile> {
       await simulateDelay(100, 200);
-      // Implement undo logic with mock stacks
-      return fixtures.mockProfilesById[profileId];
+      return fixtures.mockProfilesById[profileId] || fixtures.defaultProfile;
     },
 
     async redo(profileId: string): Promise<Profile> {
       await simulateDelay(100, 200);
-      // Implement redo logic with mock stacks
-      return fixtures.mockProfilesById[profileId];
+      return fixtures.mockProfilesById[profileId] || fixtures.defaultProfile;
     },
   },
 };

@@ -119,6 +119,8 @@ export function PackageDetails({ onBack, onSelectResource }: PackageDetailsProps
   };
 
   const resourceStats = pkg.resourceCounts;
+  const dependencies = pkg.dependencies ?? [];
+  const installedDependencies = dependencies.filter((dep) => dep.isInstalled).length;
 
   return (
     <Stack gap="md" h="100%">
@@ -278,6 +280,12 @@ export function PackageDetails({ onBack, onSelectResource }: PackageDetailsProps
                   <Stack gap="xs">
                     <Group justify="space-between">
                       <Text size="sm" c="dimmed">
+                        Package ID
+                      </Text>
+                      <Text size="sm">{pkg.id}</Text>
+                    </Group>
+                    <Group justify="space-between">
+                      <Text size="sm" c="dimmed">
                         FHIR Version
                       </Text>
                       <Badge variant="outline">{pkg.fhirVersion}</Badge>
@@ -288,6 +296,16 @@ export function PackageDetails({ onBack, onSelectResource }: PackageDetailsProps
                       </Text>
                       <Text size="sm">{pkg.size}</Text>
                     </Group>
+                    {pkg.latestVersion && (
+                      <Group justify="space-between">
+                        <Text size="sm" c="dimmed">
+                          Latest Version
+                        </Text>
+                        <Badge variant="light" color={pkg.hasUpdate ? 'orange' : 'gray'}>
+                          {pkg.latestVersion}
+                        </Badge>
+                      </Group>
+                    )}
                     {pkg.license && (
                       <Group justify="space-between">
                         <Text size="sm" c="dimmed">
@@ -328,13 +346,21 @@ export function PackageDetails({ onBack, onSelectResource }: PackageDetailsProps
                         <Text size="sm">{pkg.downloadCount.toLocaleString()}</Text>
                       </Group>
                     )}
-                    {pkg.canonical && (
+                    {resourceStats && (
                       <Group justify="space-between">
                         <Text size="sm" c="dimmed">
-                          Canonical URL
+                          Resources
                         </Text>
-                        <Text size="sm" truncate style={{ maxWidth: 200 }}>
-                          {pkg.canonical}
+                        <Text size="sm">{resourceStats.total.toLocaleString()}</Text>
+                      </Group>
+                    )}
+                    {dependencies.length > 0 && (
+                      <Group justify="space-between">
+                        <Text size="sm" c="dimmed">
+                          Dependencies
+                        </Text>
+                        <Text size="sm">
+                          {installedDependencies}/{dependencies.length} installed
                         </Text>
                       </Group>
                     )}
@@ -386,12 +412,44 @@ export function PackageDetails({ onBack, onSelectResource }: PackageDetailsProps
                         CodeSystems
                       </Text>
                     </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={600}>
+                        {resourceStats.searchParameters}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        Search Params
+                      </Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={600}>
+                        {resourceStats.operationDefinitions}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        Operations
+                      </Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={600}>
+                        {resourceStats.capabilityStatements}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        Capabilities
+                      </Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={600}>
+                        {resourceStats.total}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        Total
+                      </Text>
+                    </Box>
                   </SimpleGrid>
                 </Card>
               )}
 
               {/* Links */}
-              {pkg.homepage && (
+              {(pkg.homepage || pkg.repository || pkg.canonical) && (
                 <Card withBorder padding="md">
                   <Group gap="sm" mb="md">
                     <ThemeIcon size="md" variant="light" color="cyan">
@@ -402,12 +460,60 @@ export function PackageDetails({ onBack, onSelectResource }: PackageDetailsProps
                     </Text>
                   </Group>
                   <Stack gap="xs">
-                    <Anchor href={pkg.homepage} target="_blank" size="sm">
-                      <Group gap={4}>
-                        <IconExternalLink size={14} />
-                        Implementation Guide
+                    {pkg.homepage && (
+                      <Group justify="space-between" wrap="nowrap">
+                        <Text size="sm" c="dimmed">
+                          Homepage
+                        </Text>
+                        <Anchor
+                          href={pkg.homepage}
+                          target="_blank"
+                          size="sm"
+                          title={pkg.homepage}
+                          style={{
+                            maxWidth: 220,
+                            display: 'inline-block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {pkg.homepage}
+                        </Anchor>
                       </Group>
-                    </Anchor>
+                    )}
+                    {pkg.repository && (
+                      <Group justify="space-between" wrap="nowrap">
+                        <Text size="sm" c="dimmed">
+                          Repository
+                        </Text>
+                        <Anchor
+                          href={pkg.repository}
+                          target="_blank"
+                          size="sm"
+                          title={pkg.repository}
+                          style={{
+                            maxWidth: 220,
+                            display: 'inline-block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {pkg.repository}
+                        </Anchor>
+                      </Group>
+                    )}
+                    {pkg.canonical && (
+                      <Group justify="space-between" wrap="nowrap">
+                        <Text size="sm" c="dimmed">
+                          Canonical
+                        </Text>
+                        <Text size="sm" truncate style={{ maxWidth: 220 }} title={pkg.canonical}>
+                          {pkg.canonical}
+                        </Text>
+                      </Group>
+                    )}
                   </Stack>
                 </Card>
               )}

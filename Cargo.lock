@@ -2252,6 +2252,7 @@ dependencies = [
  "chrono",
  "clap",
  "dashmap",
+ "flate2",
  "futures",
  "indexmap",
  "maki-core",
@@ -2259,6 +2260,7 @@ dependencies = [
  "mime_guess",
  "octofhir-canonical-manager",
  "octofhir-fhirpath",
+ "reqwest",
  "rust-embed",
  "serde",
  "serde_json",
@@ -2272,6 +2274,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "urlencoding",
  "uuid",
  "zip 2.4.2",
 ]

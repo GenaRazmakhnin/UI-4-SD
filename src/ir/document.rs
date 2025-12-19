@@ -52,6 +52,7 @@ impl std::fmt::Display for ProfileStatus {
 
 /// Document metadata for a profile.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DocumentMetadata {
     /// Profile ID (business identifier).
     pub id: String,
@@ -354,6 +355,7 @@ pub struct ContactPoint {
 /// assert!(!doc.is_dirty());
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileDocument {
     /// Unique document ID (for multi-document editing).
     pub document_id: Uuid,

@@ -145,6 +145,15 @@ impl StructureDefinitionImporter {
         let mut resource = ProfiledResource::new(&parsed.url, fhir_version, base);
         resource.version = parsed.version.clone();
 
+        // Set kind from parsed SD
+        resource.kind = match parsed.kind.as_str() {
+            "resource" => crate::ir::StructureKind::Resource,
+            "complex-type" => crate::ir::StructureKind::ComplexType,
+            "primitive-type" => crate::ir::StructureKind::PrimitiveType,
+            "logical" => crate::ir::StructureKind::Logical,
+            _ => crate::ir::StructureKind::Resource,
+        };
+
         // Build element tree from snapshot (or differential if no snapshot)
         let elements = parsed
             .snapshot_elements

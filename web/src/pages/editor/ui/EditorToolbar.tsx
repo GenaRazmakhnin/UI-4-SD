@@ -10,6 +10,7 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core';
+import type { ProjectResourceKind } from '@shared/types';
 import {
   IconAlertCircle,
   IconCheck,
@@ -19,7 +20,6 @@ import {
   IconFileCode,
   IconSettings,
 } from '@tabler/icons-react';
-import type { ProjectResourceKind } from '@shared/types';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type ExportFormat = 'json' | 'fsh';
@@ -44,7 +44,7 @@ export function EditorToolbar({
   profileType,
   saveStatus,
   hasUnsavedChanges,
-    resourceKind,
+  resourceKind,
   isValidating,
   errorCount = 0,
   warningCount = 0,

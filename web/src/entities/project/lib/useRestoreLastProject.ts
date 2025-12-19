@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
 import { useUnit } from 'effector-react';
+import { useEffect, useRef } from 'react';
 import { $currentProject, $lastProjectId, fetchProjectFx } from '../model';
 
 /**

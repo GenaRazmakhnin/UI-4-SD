@@ -1,11 +1,12 @@
 import type {
+  BaseResource,
+  CreateArtifactInput,
+  CreatedArtifact,
   ElementNode,
   Extension,
   Package,
   Profile,
   Project,
-  CreateArtifactInput,
-  CreatedArtifact,
   ProjectResourceKind,
   ProjectResourceMetadata,
   ProjectTreeNode,
@@ -25,13 +26,15 @@ export const fhirCorePatient: Profile = {
   fhirVersion: '4.0.1',
   baseDefinition: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
   derivation: 'specialization',
-  description: 'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+  description:
+    'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
   elements: [
     {
       id: 'Patient',
       path: 'Patient',
       short: 'Information about an individual or animal receiving health care services',
-      definition: 'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+      definition:
+        'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
       min: 0,
       max: '*',
       isModified: false,
@@ -51,7 +54,8 @@ export const fhirCorePatient: Profile = {
           id: 'Patient.active',
           path: 'Patient.active',
           short: 'Whether this patient record is in active use',
-          definition: 'Whether this patient record is in active use. Many systems use this property to mark as non-current patients.',
+          definition:
+            'Whether this patient record is in active use. Many systems use this property to mark as non-current patients.',
           min: 0,
           max: '1',
           type: [{ code: 'boolean' }],
@@ -138,7 +142,8 @@ export const fhirCorePatient: Profile = {
           id: 'Patient.telecom',
           path: 'Patient.telecom',
           short: 'A contact detail for the individual',
-          definition: 'A contact detail (e.g. a telephone number or an email address) by which the individual may be contacted.',
+          definition:
+            'A contact detail (e.g. a telephone number or an email address) by which the individual may be contacted.',
           min: 0,
           max: '*',
           type: [{ code: 'ContactPoint' }],
@@ -149,7 +154,8 @@ export const fhirCorePatient: Profile = {
           id: 'Patient.gender',
           path: 'Patient.gender',
           short: 'male | female | other | unknown',
-          definition: 'Administrative Gender - the gender that the patient is considered to have for administration and record keeping purposes.',
+          definition:
+            'Administrative Gender - the gender that the patient is considered to have for administration and record keeping purposes.',
           min: 0,
           max: '1',
           type: [{ code: 'code' }],
@@ -197,7 +203,7 @@ export const fhirCorePatient: Profile = {
           id: 'Patient.maritalStatus',
           path: 'Patient.maritalStatus',
           short: 'Marital (civil) status of a patient',
-          definition: 'This field contains a patient\'s most recent marital (civil) status.',
+          definition: "This field contains a patient's most recent marital (civil) status.",
           min: 0,
           max: '1',
           type: [{ code: 'CodeableConcept' }],
@@ -212,7 +218,8 @@ export const fhirCorePatient: Profile = {
           id: 'Patient.multipleBirth[x]',
           path: 'Patient.multipleBirth[x]',
           short: 'Whether patient is part of a multiple birth',
-          definition: 'Indicates whether the patient is part of a multiple (boolean) or indicates the actual birth order (integer).',
+          definition:
+            'Indicates whether the patient is part of a multiple (boolean) or indicates the actual birth order (integer).',
           min: 0,
           max: '1',
           type: [{ code: 'boolean' }, { code: 'integer' }],
@@ -300,7 +307,12 @@ export const fhirCorePatient: Profile = {
               short: 'Organization that is associated with the contact',
               min: 0,
               max: '1',
-              type: [{ code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Organization'] }],
+              type: [
+                {
+                  code: 'Reference',
+                  targetProfile: ['http://hl7.org/fhir/StructureDefinition/Organization'],
+                },
+              ],
               isModified: false,
               children: [],
             },
@@ -320,7 +332,8 @@ export const fhirCorePatient: Profile = {
           id: 'Patient.communication',
           path: 'Patient.communication',
           short: 'A language which may be used to communicate with the patient',
-          definition: 'A language which may be used to communicate with the patient about his or her health.',
+          definition:
+            'A language which may be used to communicate with the patient about his or her health.',
           min: 0,
           max: '*',
           type: [{ code: 'BackboneElement' }],
@@ -355,14 +368,23 @@ export const fhirCorePatient: Profile = {
         {
           id: 'Patient.generalPractitioner',
           path: 'Patient.generalPractitioner',
-          short: 'Patient\'s nominated primary care provider',
-          definition: 'Patient\'s nominated care provider.',
+          short: "Patient's nominated primary care provider",
+          definition: "Patient's nominated care provider.",
           min: 0,
           max: '*',
           type: [
-            { code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Organization'] },
-            { code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Practitioner'] },
-            { code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/PractitionerRole'] },
+            {
+              code: 'Reference',
+              targetProfile: ['http://hl7.org/fhir/StructureDefinition/Organization'],
+            },
+            {
+              code: 'Reference',
+              targetProfile: ['http://hl7.org/fhir/StructureDefinition/Practitioner'],
+            },
+            {
+              code: 'Reference',
+              targetProfile: ['http://hl7.org/fhir/StructureDefinition/PractitionerRole'],
+            },
           ],
           isModified: false,
           children: [],
@@ -374,7 +396,12 @@ export const fhirCorePatient: Profile = {
           definition: 'Organization that is the custodian of the patient record.',
           min: 0,
           max: '1',
-          type: [{ code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Organization'] }],
+          type: [
+            {
+              code: 'Reference',
+              targetProfile: ['http://hl7.org/fhir/StructureDefinition/Organization'],
+            },
+          ],
           isModified: false,
           children: [],
         },
@@ -395,8 +422,14 @@ export const fhirCorePatient: Profile = {
               min: 1,
               max: '1',
               type: [
-                { code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Patient'] },
-                { code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/RelatedPerson'] },
+                {
+                  code: 'Reference',
+                  targetProfile: ['http://hl7.org/fhir/StructureDefinition/Patient'],
+                },
+                {
+                  code: 'Reference',
+                  targetProfile: ['http://hl7.org/fhir/StructureDefinition/RelatedPerson'],
+                },
               ],
               isModified: false,
               children: [],
@@ -1675,7 +1708,12 @@ export const mockSearchResults = {
 };
 
 // Export mock profiles as array and by ID
-export const mockProfiles: Profile[] = [fhirCorePatient, usCorePatient, observationWithSlicing, largeProfile];
+export const mockProfiles: Profile[] = [
+  fhirCorePatient,
+  usCorePatient,
+  observationWithSlicing,
+  largeProfile,
+];
 
 export const mockProfilesById: Record<string, Profile> = {
   [fhirCorePatient.id]: fhirCorePatient,
@@ -2044,11 +2082,7 @@ export function addMockArtifact(
   const fileName = `${resourceId}.json`;
   const resourceType = input.kind === 'valueset' ? 'ValueSet' : 'StructureDefinition';
   const resourceKind: ProjectResourceKind =
-    input.kind === 'valueset'
-      ? 'valueset'
-      : input.kind === 'extension'
-        ? 'extension'
-        : 'profile';
+    input.kind === 'valueset' ? 'valueset' : input.kind === 'extension' ? 'extension' : 'profile';
 
   const canonicalUrl = `http://example.org/${projectId}/${resourceType}/${resourceId}`;
   const path = `${folderPath}/${fileName}`;
@@ -2082,6 +2116,7 @@ export const mockProjects: Project[] = [
     id: 'clinical-quality-suite',
     name: 'Clinical Quality Suite',
     fhirVersion: '4.0.1',
+    status: 'draft',
     templateId: 'implementation-guide',
     description: 'Quality measures and profiles for chronic care coordination.',
     packageId: 'org.example.cqs',
@@ -2090,7 +2125,7 @@ export const mockProjects: Project[] = [
     publisher: 'FHIR Builders',
     path: '/workspace/cqs',
     createdAt: '2024-09-12T08:00:00.000Z',
-    updatedAt: '2024-12-18T17:30:00.000Z',
+    modifiedAt: '2024-12-18T17:30:00.000Z',
     lastOpenedAt: '2025-01-05T09:40:00.000Z',
     dependencies: [
       { packageId: 'hl7.fhir.r4.core', version: '4.0.1', name: 'FHIR R4 Core' },
@@ -2101,6 +2136,7 @@ export const mockProjects: Project[] = [
     id: 'regional-care-ig',
     name: 'Regional Care IG',
     fhirVersion: '4.3.0',
+    status: 'draft',
     templateId: 'regional',
     description: 'Starter kit for regional implementation guides with IPS alignment.',
     packageId: 'org.example.rcig',
@@ -2109,7 +2145,7 @@ export const mockProjects: Project[] = [
     publisher: 'Northwind Health',
     path: '/workspace/regional-care',
     createdAt: '2024-10-01T10:15:00.000Z',
-    updatedAt: '2024-12-20T15:05:00.000Z',
+    modifiedAt: '2024-12-20T15:05:00.000Z',
     lastOpenedAt: '2025-01-03T13:05:00.000Z',
     dependencies: [{ packageId: 'hl7.fhir.uv.ips', version: '1.1.0', name: 'IPS' }],
   },
@@ -2117,6 +2153,7 @@ export const mockProjects: Project[] = [
     id: 'device-data-pilot',
     name: 'Device Data Pilot',
     fhirVersion: '5.0.0',
+    status: 'draft',
     templateId: 'blank',
     description: 'Lightweight pilot for ingesting device telemetry into FHIR.',
     packageId: 'org.example.ddp',
@@ -2125,7 +2162,7 @@ export const mockProjects: Project[] = [
     publisher: 'Signal Labs',
     path: '/workspace/device-data',
     createdAt: '2024-11-12T09:12:00.000Z',
-    updatedAt: '2024-12-28T10:45:00.000Z',
+    modifiedAt: '2024-12-28T10:45:00.000Z',
     lastOpenedAt: '2025-01-06T08:10:00.000Z',
     dependencies: [{ packageId: 'hl7.fhir.uv.ipa', version: '1.0.0', name: 'IPA' }],
   },
@@ -2133,6 +2170,7 @@ export const mockProjects: Project[] = [
     id: 'research-catalog',
     name: 'Research Catalog',
     fhirVersion: '4.0.1',
+    status: 'published',
     templateId: 'custom',
     description: 'Research profile catalog with observation and questionnaire focus.',
     packageId: 'org.example.research',
@@ -2141,7 +2179,7 @@ export const mockProjects: Project[] = [
     publisher: 'Open Health Labs',
     path: '/workspace/research',
     createdAt: '2024-08-06T11:00:00.000Z',
-    updatedAt: '2024-12-10T16:10:00.000Z',
+    modifiedAt: '2024-12-10T16:10:00.000Z',
     lastOpenedAt: '2025-01-02T18:25:00.000Z',
     dependencies: [{ packageId: 'hl7.fhir.uv.sdc', version: '3.0.0', name: 'SDC' }],
   },
@@ -2154,13 +2192,17 @@ export const mockProjectsById: Record<string, Project> = Object.fromEntries(
 export function createMockProject(
   overrides: Partial<Project> & Pick<Project, 'name' | 'fhirVersion'>
 ): Project {
-  const slug = overrides.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const slug = overrides.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
   const now = new Date().toISOString();
 
   const project: Project = {
     id: overrides.id ?? `${slug || 'project'}-${Math.random().toString(36).slice(2, 8)}`,
     name: overrides.name,
     fhirVersion: overrides.fhirVersion,
+    status: overrides.status ?? 'draft',
     templateId: overrides.templateId ?? 'blank',
     description:
       overrides.description ?? 'Custom project created from the mock API while backend is offline.',
@@ -2170,7 +2212,7 @@ export function createMockProject(
     publisher: overrides.publisher ?? 'FHIR Profile Builder',
     path: overrides.path ?? `/workspace/${slug || 'project'}`,
     createdAt: overrides.createdAt ?? now,
-    updatedAt: overrides.updatedAt ?? now,
+    modifiedAt: overrides.modifiedAt ?? now,
     lastOpenedAt: overrides.lastOpenedAt ?? now,
     dependencies: overrides.dependencies ?? [],
   };
@@ -2184,6 +2226,224 @@ export function createMockProject(
 // Mock undo/redo stacks
 export const mockUndoStack: Record<string, unknown[]> = {};
 export const mockRedoStack: Record<string, unknown[]> = {};
+
+// FHIR R4 Base Resource Types for profile creation
+export const mockBaseResources: BaseResource[] = [
+  {
+    name: 'Account',
+    url: 'http://hl7.org/fhir/StructureDefinition/Account',
+    title: 'Account',
+    description: 'A financial tool for tracking value accrued for a particular purpose.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'ActivityDefinition',
+    url: 'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+    title: 'ActivityDefinition',
+    description: 'A resource describing the definition of a requested or planned activity.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'AllergyIntolerance',
+    url: 'http://hl7.org/fhir/StructureDefinition/AllergyIntolerance',
+    title: 'Allergy Intolerance',
+    description: 'Risk of harmful or undesirable physiological response from a substance or agent.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Appointment',
+    url: 'http://hl7.org/fhir/StructureDefinition/Appointment',
+    title: 'Appointment',
+    description:
+      'A booking of a healthcare event among patient(s), practitioner(s), and device(s).',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'CarePlan',
+    url: 'http://hl7.org/fhir/StructureDefinition/CarePlan',
+    title: 'Care Plan',
+    description: 'Describes the intention of how one or more practitioners care for a patient.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Claim',
+    url: 'http://hl7.org/fhir/StructureDefinition/Claim',
+    title: 'Claim',
+    description:
+      'A provider-issued list of professional services and products for reimbursement or communication.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Condition',
+    url: 'http://hl7.org/fhir/StructureDefinition/Condition',
+    title: 'Condition',
+    description: 'A clinical condition, problem, diagnosis, or other health event.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Coverage',
+    url: 'http://hl7.org/fhir/StructureDefinition/Coverage',
+    title: 'Coverage',
+    description: 'Financial instrument providing reimbursement for health care services.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Device',
+    url: 'http://hl7.org/fhir/StructureDefinition/Device',
+    title: 'Device',
+    description: 'A type of manufactured item used in the provision of healthcare.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'DiagnosticReport',
+    url: 'http://hl7.org/fhir/StructureDefinition/DiagnosticReport',
+    title: 'Diagnostic Report',
+    description: 'The findings and interpretation of diagnostic tests.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Encounter',
+    url: 'http://hl7.org/fhir/StructureDefinition/Encounter',
+    title: 'Encounter',
+    description: 'An interaction between a patient and healthcare provider(s).',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Goal',
+    url: 'http://hl7.org/fhir/StructureDefinition/Goal',
+    title: 'Goal',
+    description: 'Describes the intended objective(s) for a patient, group or organization.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Immunization',
+    url: 'http://hl7.org/fhir/StructureDefinition/Immunization',
+    title: 'Immunization',
+    description: 'Immunization event information.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Location',
+    url: 'http://hl7.org/fhir/StructureDefinition/Location',
+    title: 'Location',
+    description: 'Details and position information for a physical place.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Medication',
+    url: 'http://hl7.org/fhir/StructureDefinition/Medication',
+    title: 'Medication',
+    description: 'Definition of a medication for the purposes of prescribing, dispensing, etc.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'MedicationRequest',
+    url: 'http://hl7.org/fhir/StructureDefinition/MedicationRequest',
+    title: 'Medication Request',
+    description: 'An order or request for a medication.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Observation',
+    url: 'http://hl7.org/fhir/StructureDefinition/Observation',
+    title: 'Observation',
+    description:
+      'Measurements and simple assertions made about a patient, device or other subject.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Organization',
+    url: 'http://hl7.org/fhir/StructureDefinition/Organization',
+    title: 'Organization',
+    description: 'A formally or informally recognized grouping of people or organizations.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Patient',
+    url: 'http://hl7.org/fhir/StructureDefinition/Patient',
+    title: 'Patient',
+    description:
+      'Demographics and other administrative information about an individual or animal receiving care.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Practitioner',
+    url: 'http://hl7.org/fhir/StructureDefinition/Practitioner',
+    title: 'Practitioner',
+    description:
+      'A person who is directly or indirectly involved in the provisioning of healthcare.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Procedure',
+    url: 'http://hl7.org/fhir/StructureDefinition/Procedure',
+    title: 'Procedure',
+    description: 'An action that is performed on a patient to diagnose, treat, or otherwise.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Questionnaire',
+    url: 'http://hl7.org/fhir/StructureDefinition/Questionnaire',
+    title: 'Questionnaire',
+    description: 'A structured set of questions intended to guide data collection.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'QuestionnaireResponse',
+    url: 'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+    title: 'Questionnaire Response',
+    description: 'A structured set of questions and their answers.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'RelatedPerson',
+    url: 'http://hl7.org/fhir/StructureDefinition/RelatedPerson',
+    title: 'Related Person',
+    description:
+      'Information about a person that is involved in the care of a patient but not a direct target of care.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'ServiceRequest',
+    url: 'http://hl7.org/fhir/StructureDefinition/ServiceRequest',
+    title: 'Service Request',
+    description: 'A record of a request for a procedure or diagnostic to be performed.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+  {
+    name: 'Specimen',
+    url: 'http://hl7.org/fhir/StructureDefinition/Specimen',
+    title: 'Specimen',
+    description: 'A sample to be used for analysis.',
+    packageName: 'hl7.fhir.r4.core',
+    packageVersion: '4.0.1',
+  },
+];
 
 // Factory function for creating mock profiles
 export function createMockProfile(overrides?: Partial<Profile>): Profile {

@@ -1,7 +1,7 @@
 import {
+  type CSSVariablesResolver,
   createTheme,
   defaultCssVariablesResolver,
-  type CSSVariablesResolver,
   type MantineColorsTuple,
 } from '@mantine/core';
 
@@ -81,4 +81,3 @@ export const mantineCssVariablesResolver: CSSVariablesResolver = (theme) => {
     },
   };
 };
-

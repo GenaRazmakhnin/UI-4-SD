@@ -1,1 +1,1 @@
-export { useProjectResource, projectResourceKeys } from './api/queries';
+export { projectResourceKeys, useProjectResource } from './api/queries';

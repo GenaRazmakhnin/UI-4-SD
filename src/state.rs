@@ -11,6 +11,7 @@ use octofhir_canonical_manager::CanonicalManager;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{OnceCell, RwLock};
 
+use crate::api::registry_catalog::{create_registry_catalog, SharedRegistryCatalog};
 use crate::validation::ValidationResult;
 use crate::Config;
 
@@ -38,6 +39,8 @@ struct AppStateInner {
     validation_cache: DashMap<String, CachedValidation>,
     /// Validation configuration.
     validation_config: RwLock<ValidationConfig>,
+    /// Registry catalog for package search.
+    registry_catalog: SharedRegistryCatalog,
 }
 
 /// Cached validation result with metadata.
@@ -117,6 +120,7 @@ impl AppState {
                 canonical_manager: OnceCell::new(),
                 validation_cache: DashMap::new(),
                 validation_config: RwLock::new(ValidationConfig::default()),
+                registry_catalog: create_registry_catalog(),
             }),
         }
     }
@@ -135,6 +139,12 @@ impl AppState {
                 Ok(Arc::new(manager))
             })
             .await
+    }
+
+    /// Get the registry catalog for package search.
+    #[must_use]
+    pub fn registry_catalog(&self) -> &SharedRegistryCatalog {
+        &self.inner.registry_catalog
     }
 
     /// Get a reference to the configuration.

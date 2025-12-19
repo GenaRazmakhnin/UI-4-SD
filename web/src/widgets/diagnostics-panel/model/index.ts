@@ -4,6 +4,14 @@ import { selectElement } from '@widgets/element-tree';
 import { createEffect, createEvent, createStore, sample } from 'effector';
 
 /**
+ * Validation params
+ */
+export interface ValidateParams {
+  projectId: string;
+  profileId: string;
+}
+
+/**
  * Diagnostic filters
  */
 export interface DiagnosticFilters {
@@ -19,7 +27,12 @@ export interface DiagnosticFilters {
 export const diagnosticsReceived = createEvent<Diagnostic[]>();
 export const diagnosticClicked = createEvent<Diagnostic>();
 export const diagnosticDismissed = createEvent<string>(); // diagnostic id
-export const quickFixApplied = createEvent<{ diagnosticId: string; fix: QuickFix }>();
+export const quickFixApplied = createEvent<{
+  diagnosticId: string;
+  fix: QuickFix;
+  projectId: string;
+  profileId: string;
+}>();
 export const filtersChanged = createEvent<Partial<DiagnosticFilters>>();
 export const filterCleared = createEvent<void>();
 export const diagnosticsCleared = createEvent<void>();
@@ -28,8 +41,8 @@ export const applyAllFixes = createEvent<void>();
 /**
  * Validate profile effect
  */
-export const validateProfileFx = createEffect(async (profileId: string) => {
-  const result = await api.validation.validate(profileId);
+export const validateProfileFx = createEffect(async ({ projectId, profileId }: ValidateParams) => {
+  const result = await api.validation.validate(projectId, profileId);
 
   // Convert ValidationResult to Diagnostic[]
   const diagnostics: Diagnostic[] = [];
@@ -77,13 +90,21 @@ export const validateProfileFx = createEffect(async (profileId: string) => {
  * Apply quick fix effect
  */
 export const applyQuickFixFx = createEffect(
-  async ({ diagnosticId, fix }: { diagnosticId: string; fix: QuickFix }) => {
-    // TODO: Implement actual fix application via API
-    console.log('Applying fix:', fix.label, 'for diagnostic:', diagnosticId);
-
-    // Simulate fix application
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
+  async ({
+    diagnosticId,
+    fix,
+    projectId,
+    profileId,
+  }: {
+    diagnosticId: string;
+    fix: QuickFix;
+    projectId: string;
+    profileId: string;
+  }) => {
+    // Apply fix via API
+    if (fix.id) {
+      await api.validation.applyFix(projectId, profileId, fix.id);
+    }
     return { diagnosticId, fix };
   }
 );

@@ -9,6 +9,7 @@ import {
 import { HistoryViewer, UndoRedoProvider, useUndoRedoShortcuts } from '@features/undo-redo';
 import { Tabs } from '@mantine/core';
 import { useHotkeys } from '@mantine/hooks';
+import { useProfileResourceGuard } from '@shared/routing/guards';
 import { useParams } from '@tanstack/react-router';
 import {
   $errorCount,
@@ -17,13 +18,19 @@ import {
   DiagnosticsPanel,
   validateProfileFx,
 } from '@widgets/diagnostics-panel';
-import { $selectedElement, ElementTree, loadElementTreeFx } from '@widgets/element-tree';
+import {
+  $profileContext,
+  $selectedElement,
+  $loadError as $treeError,
+  $isLoading as $treeLoading,
+  ElementTree,
+  loadProfileFx,
+} from '@widgets/element-tree';
 import { InspectorPanel } from '@widgets/inspector-panel';
 import { PreviewPanel } from '@widgets/preview-panel';
 import { useUnit } from 'effector-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
-import { useProfileResourceGuard } from '@shared/routing/guards';
 import { useUnsavedChangesWarning } from '../lib';
 import {
   $hasUnsavedChanges,
@@ -43,6 +50,9 @@ export function ProfileEditorPage() {
   });
   const { resource } = useProfileResourceGuard({ projectId, profileId });
   const selectedElement = useUnit($selectedElement);
+  const profilesContext = useUnit($profileContext);
+  const treeLoading = useUnit($treeLoading);
+  const treeError = useUnit($treeError);
   const [bottomTab, setBottomTab] = useState<BottomTab>('preview');
 
   // Editor state
@@ -53,9 +63,11 @@ export function ProfileEditorPage() {
   const isValidating = useUnit($isValidating);
 
   // Load element tree when profile changes
-  // useEffect(() => {
-  //   loadElementTreeFx(profileId);
-  // }, [profileId]);
+  useEffect(() => {
+    if (projectId && profileId) {
+      loadProfileFx({ projectId, profileId });
+    }
+  }, [projectId, profileId]);
 
   // Sync selected element to quick-constraints model
   useEffect(() => {
@@ -69,18 +81,18 @@ export function ProfileEditorPage() {
 
   // Handlers
   const handleSave = useCallback(() => {
-    saveProfileFx(profileId);
-  }, [profileId]);
+    saveProfileFx({ projectId, profileId });
+  }, [projectId, profileId]);
 
   const handleValidate = useCallback(() => {
-    validateProfileFx(profileId);
-  }, [profileId]);
+    validateProfileFx({ projectId, profileId });
+  }, [projectId, profileId]);
 
   const handleExport = useCallback(
     (format: ExportFormat) => {
-      exportProfileFx({ profileId, format });
+      exportProfileFx({ projectId, profileId, format });
     },
-    [profileId]
+    [projectId, profileId]
   );
 
   const handleSettingsClick = useCallback(() => {
@@ -157,21 +169,21 @@ export function ProfileEditorPage() {
             <Panel id="preview" defaultSize="35" minSize="20" maxSize="50">
               <div className={styles.rightPanel}>
                 <Tabs
-                    className={styles.tabs}
-                    value={bottomTab}
-                    onChange={(v) => setBottomTab(v as BottomTab)}
+                  className={styles.tabs}
+                  value={bottomTab}
+                  onChange={(v) => setBottomTab(v as BottomTab)}
                 >
                   <Tabs.List>
                     <Tabs.Tab value="preview">Preview</Tabs.Tab>
                     <Tabs.Tab value="diagnostics">
                       Diagnostics
                       {(errorCount > 0 || warningCount > 0) && (
-                          <span className={styles.tabBadge}>{errorCount + warningCount}</span>
+                        <span className={styles.tabBadge}>{errorCount + warningCount}</span>
                       )}
                     </Tabs.Tab>
                   </Tabs.List>
                   <Tabs.Panel value="preview" className={styles.tabPanel}>
-                    <PreviewPanel profileId={profileId} />
+                    <PreviewPanel projectId={projectId} profileId={profileId} />
                   </Tabs.Panel>
                   <Tabs.Panel value="diagnostics" className={styles.tabPanel}>
                     <DiagnosticsPanel profileId={profileId} collapsible={false} />

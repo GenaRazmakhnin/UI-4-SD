@@ -66,6 +66,7 @@ impl Default for ProjectConfig {
 
 /// Index of all profiles in a project.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileIndex {
     /// Version of the index format.
     pub version: u32,
@@ -77,6 +78,7 @@ pub struct ProfileIndex {
 
 /// Entry in the profile index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileIndexEntry {
     /// Profile ID.
     pub id: String,

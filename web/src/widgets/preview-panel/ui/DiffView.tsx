@@ -7,6 +7,7 @@ import styles from './PreviewPanel.module.css';
 import { DiffToolbar } from './PreviewToolbar';
 
 export interface DiffViewProps {
+  projectId: string;
   profileId: string;
   baseContent: string;
   isFullscreen: boolean;
@@ -14,12 +15,13 @@ export interface DiffViewProps {
 }
 
 export function DiffView({
+  projectId,
   profileId,
   baseContent,
   isFullscreen,
   onToggleFullscreen,
 }: DiffViewProps) {
-  const { data, isLoading, error } = useSDJsonPreview(profileId);
+  const { data, isLoading, error } = useSDJsonPreview(projectId, profileId);
   const [diffMode, setDiffMode] = useState<'side-by-side' | 'unified'>('side-by-side');
   const [exportMode, setExportMode] = useState<'differential' | 'snapshot' | 'both'>(
     'differential'

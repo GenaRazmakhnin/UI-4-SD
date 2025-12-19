@@ -1,7 +1,28 @@
 // Profile types
 
 // Export types
-export type { ExportResult } from './export';
+export type {
+  BulkExportOptions,
+  BulkExportResponse,
+  ExportDiagnostic,
+  ExportedFile,
+  ExportMetadata,
+  ExportResult,
+  ExportSummary,
+  FshExportOptions,
+  FshExportResponse,
+  HighlightToken,
+  ImportDiagnostic,
+  ImportFormat,
+  ImportProfileRequest,
+  ImportProfileResponse,
+  PreviewOptions,
+  PreviewResponse,
+  ResourceDiagnostic,
+  SdExportOptions,
+  SdExportResponse,
+  SyntaxHighlighting,
+} from './export';
 export type {
   Extension,
   ExtensionContext,
@@ -9,9 +30,20 @@ export type {
   ExtensionContextValidation,
   ExtensionUsage,
 } from './extension';
-
+export type { ProjectResourceKind, ProjectTreeNode, ProjectTreeRoot } from './file-tree';
 // Package types
 export type {
+  FacetsDto,
+  InstallEvent,
+  InstallEventComplete,
+  InstallEventError,
+  InstallEventExtracting,
+  InstallEventIndexing,
+  InstallEventProgress,
+  InstallEventStart,
+  InstallEventType,
+  InstallJob,
+  InstallJobStatus,
   Package,
   PackageDependency,
   PackageInstallProgress,
@@ -20,6 +52,7 @@ export type {
   PackageResourceCounts,
   PackageSearchResult,
   PackageVersion,
+  SearchResponseWithFacets,
 } from './package';
 export type {
   BindingConstraint,
@@ -34,12 +67,11 @@ export type {
   SlicingRules,
   TypeConstraint,
 } from './profile';
-export type { ProjectTreeNode, ProjectTreeRoot, ProjectResourceKind } from './file-tree';
-export type { CreateProjectInput, Project } from './project';
+export type { CreateProjectInput, Project, ProjectStatus, UpdateProjectInput } from './project';
 export type { ProjectResourceMetadata } from './resource';
 
 // Search types
-export type { SearchFilters, SearchResult } from './search';
+export type { BaseResource, ElementSearchResult, SearchFilters, SearchResult } from './search';
 // Terminology types
 export type {
   CodeSystem,

@@ -76,6 +76,54 @@
 
 .treeList {
   height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.schemaTeaser {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-top: auto;
+  border-top: 1px dashed var(--mantine-color-gray-3);
+  background: linear-gradient(135deg, rgba(190, 75, 219, 0.04) 0%, rgba(255, 130, 180, 0.04) 100%);
+  border-radius: 0 0 10px 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.schemaTeaser:hover {
+  background: linear-gradient(135deg, rgba(190, 75, 219, 0.08) 0%, rgba(255, 130, 180, 0.08) 100%);
+}
+
+.schemaTeaserIcon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    var(--mantine-color-grape-5) 0%,
+    var(--mantine-color-pink-5) 100%
+  );
+  color: white;
+  flex-shrink: 0;
+}
+
+.schemaTeaserContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.schemaTeaserMeta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .placeholder {

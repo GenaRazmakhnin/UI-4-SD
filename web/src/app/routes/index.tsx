@@ -1,10 +1,10 @@
 import { ProfileEditorPage } from '@pages/editor';
 import { NotFoundPage } from '@pages/not-found';
 import { PackagesPage } from '@pages/packages';
-import { ProjectDetailsPage, ProjectsPage } from '@pages/projects';
 import { ProjectTreePage } from '@pages/project-tree';
+import { ProjectDetailsPage, ProjectsPage } from '@pages/projects';
 import { SettingsPage } from '@pages/settings';
-import { Navigate, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
+import { createRootRoute, createRoute, createRouter, Navigate } from '@tanstack/react-router';
 import { RootLayout } from '../layouts/RootLayout';
 
 // Root route with layout

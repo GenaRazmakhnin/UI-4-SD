@@ -89,12 +89,7 @@ export function ProjectTreeRow({
       <div className={styles.content}>
         <div className={styles.titleLine}>
           <span className={cn(styles.name, isMatch && styles.match)}>{node.name}</span>
-          <Badge
-            size="xs"
-            variant="light"
-            color={badgeColor(node)}
-            className={styles.typeBadge}
-          >
+          <Badge size="xs" variant="light" color={badgeColor(node)} className={styles.typeBadge}>
             {node.kind === 'folder' ? node.root : resourceKindLabel(node)}
           </Badge>
         </div>

@@ -71,8 +71,8 @@ function ProjectCard({ project, onOpen, onEdit }: ProjectCardProps) {
                 ? `Opened ${formatDistanceToNow(new Date(project.lastOpenedAt), {
                     addSuffix: true,
                   })}`
-                : project.updatedAt
-                  ? `Updated ${formatDistanceToNow(new Date(project.updatedAt), {
+                : project.modifiedAt
+                  ? `Updated ${formatDistanceToNow(new Date(project.modifiedAt), {
                       addSuffix: true,
                     })}`
                   : 'Fresh project'}

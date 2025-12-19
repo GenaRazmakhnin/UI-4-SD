@@ -19,13 +19,13 @@ export function useProfileResourceGuard({ projectId, profileId }: ProfileResourc
     const isIR = data?.root === 'IR';
     if (!isProfile || !isIR || isError) {
       hasRedirected.current = true;
-      notifications.show({
-        title: 'Profile Editor unavailable',
-        message: !isProfile
-          ? 'Only profile StructureDefinitions can be opened in the editor.'
-          : 'Profile Editor is only available for IR resources in this project.',
-        color: 'red',
-      });
+      // notifications.show({
+      //   title: 'Profile Editor unavailable',
+      //   message: !isProfile
+      //     ? 'Only profile StructureDefinitions can be opened in the editor.'
+      //     : 'Profile Editor is only available for IR resources in this project.',
+      //   color: 'red',
+      // });
       // navigation.toProjectFiles(projectId);
     }
   }, [data?.resourceKind, data?.root, isError, isLoading, projectId]);
