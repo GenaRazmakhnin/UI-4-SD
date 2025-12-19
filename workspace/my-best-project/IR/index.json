@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "modifiedAt": "2025-12-19T13:03:42.678893Z",
+  "resources": {
+    "d1ea761e-237f-4b7d-ac61-11d1848084ec": {
+      "id": "d1ea761e-237f-4b7d-ac61-11d1848084ec",
+      "canonicalUrl": "https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CorePacienteCl",
+      "kind": "profile",
+      "name": "PacienteCl",
+      "sourceFormat": "sd",
+      "irPath": "IR/resources/d1ea761e-237f-4b7d-ac61-11d1848084ec.json",
+      "sdPath": "./workspace/my-best-project/SD/StructureDefinition/d1ea761e-237f-4b7d-ac61-11d1848084ec.json",
+      "base": "http://hl7.org/fhir/StructureDefinition/Patient",
+      "dependencies": [],
+      "createdAt": "2025-12-19T13:03:42.653527Z",
+      "modifiedAt": "2025-12-19T13:03:42.653527Z"
+    }
+  }
+}

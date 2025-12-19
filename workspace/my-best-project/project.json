@@ -1,0 +1,11 @@
+{
+  "id": "my-best-project",
+  "name": "MY BEST PROJECT",
+  "canonicalBase": "http://gena.the.best",
+  "fhirVersion": "4.0.1",
+  "dependencies": [],
+  "version": "0.1.0",
+  "status": "draft",
+  "createdAt": "2025-12-19T13:03:21.794813Z",
+  "modifiedAt": "2025-12-19T13:03:42.683534Z"
+}

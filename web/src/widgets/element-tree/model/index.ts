@@ -26,6 +26,7 @@ export interface ProfileContext {
   canUndo: boolean;
   canRedo: boolean;
 }
+type SliceView = 'base' | string; // 'base' = core fields only, otherwise specific sliceName
 
 // Stores
 export const $elementTree = createStore<ElementNode[]>([]);
@@ -40,6 +41,7 @@ export const $filterOptions = createStore<FilterOptions>({
 });
 export const $isLoading = createStore(false);
 export const $loadError = createStore<string | null>(null);
+export const $sliceViews = createStore<Record<string, SliceView>>({});
 
 // Events
 export const elementSelected = createEvent<ElementNode>();
@@ -52,6 +54,7 @@ export const searchQueryChanged = createEvent<string>();
 export const treeLoaded = createEvent<ElementNode[]>();
 export const profileContextUpdated = createEvent<Partial<ProfileContext>>();
 export const clearProfile = createEvent();
+export const sliceViewChanged = createEvent<{ path: string; view: SliceView }>();
 
 // Effects
 export const loadProfileFx = createEffect<
@@ -334,6 +337,12 @@ $loadError.on(loadProfileFx.failData, (_, error) => error.message);
 $loadError.reset(loadProfileFx);
 
 $elementTree.on(loadProfileFx.doneData, (_, { elements }) => elements);
+$sliceViews.on(sliceViewChanged, (current, { path, view }) => ({
+  ...current,
+  [path]: view,
+}));
+
+// $elementTree.on(loadElementTreeFx.doneData, (_, tree) => tree);
 $elementTree.on(treeLoaded, (_, tree) => tree);
 $elementTree.reset(clearProfile);
 
