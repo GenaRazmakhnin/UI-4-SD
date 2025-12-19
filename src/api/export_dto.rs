@@ -131,7 +131,7 @@ pub enum PreviewFormat {
 #[derive(Debug, Serialize)]
 pub struct SdExportResponse {
     /// The exported StructureDefinition JSON
-    pub content: serde_json::Value,
+    pub data: serde_json::Value,
     /// Export metadata
     pub metadata: ExportMetadata,
     /// Validation diagnostics (if any)
@@ -143,7 +143,7 @@ pub struct SdExportResponse {
 #[derive(Debug, Serialize)]
 pub struct FshExportResponse {
     /// The exported FSH content
-    pub content: String,
+    pub data: String,
     /// Export metadata
     pub metadata: ExportMetadata,
     /// Validation diagnostics (if any)

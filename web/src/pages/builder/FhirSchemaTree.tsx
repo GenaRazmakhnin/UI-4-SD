@@ -1,17 +1,18 @@
-import React, { useMemo, useState } from 'react';
-import resourceSchema from './r4.resource.json';
-import domainSchema from './r4.domainresource.json';
-import baseSchema from './r4.core.json';
-import humanNameSchema from './r4.humanname.json';
+import type React from 'react';
+import { useMemo, useState } from 'react';
+import profileSchema from './cl.core.profile.json';
 import addressSchema from './r4.address.json';
-import identifierSchema from './r4.identifier.json';
+import attachmentSchema from './r4.attachment.json';
+import backboneElementSchema from './r4.backboneelement.json';
+import codeableConceptSchema from './r4.codeableconcept.json';
 import contactPointSchema from './r4.contactpoint.json';
+import baseSchema from './r4.core.json';
+import domainSchema from './r4.domainresource.json';
+import humanNameSchema from './r4.humanname.json';
+import identifierSchema from './r4.identifier.json';
 import periodSchema from './r4.period.json';
 import referenceSchema from './r4.reference.json';
-import attachmentSchema from './r4.attachment.json';
-import codeableConceptSchema from './r4.codeableconcept.json';
-import backboneElementSchema from './r4.backboneelement.json';
-import profileSchema from './cl.core.profile.json';
+import resourceSchema from './r4.resource.json';
 
 type RawElement = {
   type?: string;
@@ -73,9 +74,7 @@ const pickDescription = (meta?: RawElement) => {
 
 const computeCardinality = (meta: RawElement, isRequired: boolean) => {
   const min = meta.min ?? (isRequired ? 1 : 0);
-  const max =
-    meta.max ??
-    (meta.array ? '*' : meta.scalar || meta.type || meta.choices ? 1 : 1);
+  const max = meta.max ?? (meta.array ? '*' : meta.scalar || meta.type || meta.choices ? 1 : 1);
 
   return { min, max };
 };
@@ -113,7 +112,10 @@ const mergeMeta = (base: RawElement | undefined, profile: RawElement | undefined
   return {
     ...base,
     ...profile,
-    elements: base.elements || profile.elements ? { ...(base.elements ?? {}), ...(profile.elements ?? {}) } : undefined,
+    elements:
+      base.elements || profile.elements
+        ? { ...(base.elements ?? {}), ...(profile.elements ?? {}) }
+        : undefined,
   };
 };
 
@@ -123,9 +125,12 @@ const buildNodes = (
   parentId: string,
   rootBaseElements: Record<string, RawElement>,
   requiredChildren: string[] = [],
-  typeStack: string[] = [],
+  typeStack: string[] = []
 ): TreeNode[] => {
-  const orderedNames = [...Object.keys(baseElements), ...Object.keys(profileElements).filter((name) => !(name in baseElements))];
+  const orderedNames = [
+    ...Object.keys(baseElements),
+    ...Object.keys(profileElements).filter((name) => !(name in baseElements)),
+  ];
 
   return orderedNames.reduce<TreeNode[]>((acc, name) => {
     const baseMeta = baseElements[name];
@@ -137,12 +142,15 @@ const buildNodes = (
       const slices = profileMeta?.slicing?.slices;
       if (slices) {
         const mergedMeta = mergeMeta(baseMeta, profileMeta);
-        const sliceBaseElements = { ...getTypeElements(mergedMeta.type), ...(mergedMeta.elements ?? {}) };
+        const sliceBaseElements = {
+          ...getTypeElements(mergedMeta.type),
+          ...(mergedMeta.elements ?? {}),
+        };
         Object.entries(slices).forEach(([sliceName, sliceMeta]) => {
           const sliceSchema = sliceMeta.schema ?? {};
           const sliceCardinality = computeCardinality(
             { ...mergedMeta, ...sliceSchema, min: sliceMeta.min, max: sliceMeta.max },
-            false,
+            false
           );
           const sliceChildren = buildNodes(
             sliceBaseElements,
@@ -150,7 +158,7 @@ const buildNodes = (
             `${parentId}/${name}:${sliceName}`,
             rootBaseElements,
             sliceSchema.required ?? [],
-            mergedMeta.type ? [...typeStack, mergedMeta.type] : typeStack,
+            mergedMeta.type ? [...typeStack, mergedMeta.type] : typeStack
           );
 
           acc.push({
@@ -165,7 +173,11 @@ const buildNodes = (
               isModifier: sliceSchema.modifier ?? mergedMeta.modifier,
               mustSupport: sliceSchema.mustSupport ?? mergedMeta.mustSupport,
               short: pickDescription(sliceSchema) ?? pickDescription(mergedMeta),
-              desc: sliceSchema.definition ?? sliceSchema.comment ?? sliceSchema.requirements ?? mergedMeta.definition,
+              desc:
+                sliceSchema.definition ??
+                sliceSchema.comment ??
+                sliceSchema.requirements ??
+                mergedMeta.definition,
             },
           });
         });
@@ -181,7 +193,9 @@ const buildNodes = (
 
     const typeElements = metaType !== 'union' ? getTypeElements(metaTypeName) : {};
     const alreadyInStack = metaTypeName ? typeStack.includes(metaTypeName) : false;
-    const baseForChildren = alreadyInStack ? {} : { ...typeElements, ...(mergedMeta.elements ?? {}) };
+    const baseForChildren = alreadyInStack
+      ? {}
+      : { ...typeElements, ...(mergedMeta.elements ?? {}) };
 
     const nestedBaseElements = baseForChildren;
     const nestedProfileElements = profileMeta?.elements ?? {};
@@ -194,7 +208,7 @@ const buildNodes = (
       nodeId,
       rootBaseElements,
       nestedRequired,
-      nextStack,
+      nextStack
     );
     let sliceVariants: TreeNode['sliceVariants'];
 
@@ -233,7 +247,7 @@ const buildNodes = (
           `${nodeId}/${sliceName}`,
           rootBaseElements,
           sliceSchema.required ?? [],
-          metaTypeName ? [...typeStack, metaTypeName] : typeStack,
+          metaTypeName ? [...typeStack, metaTypeName] : typeStack
         );
         return {
           id: `${nodeId}:${sliceName}`,

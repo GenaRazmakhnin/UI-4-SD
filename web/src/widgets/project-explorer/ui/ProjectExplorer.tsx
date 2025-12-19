@@ -89,8 +89,6 @@ export function ProjectExplorer({
 
   const handleSelect = useCallback((node: ProjectTreeNode) => {
     nodeSelected(node);
-    // Just select the node to show info in DetailsPanel
-    // User clicks "Open in Profile Editor" button to navigate
   }, []);
 
   const handleToggle = useCallback((path: string) => {

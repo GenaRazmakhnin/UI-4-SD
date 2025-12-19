@@ -293,11 +293,27 @@ export const mockApi = {
 
       return {
         profile: {
-          id: profileId,
-          name,
-          url,
-          status: 'draft',
-          baseDefinition,
+          documentId: crypto.randomUUID(),
+          metadata: {
+            id: profileId,
+            name,
+            url,
+            status: 'draft',
+          },
+          resource: {
+            url,
+            fhirVersion: '4.0.1',
+            base: { url: baseDefinition, type: 'Patient' },
+            kind: 'resource',
+            root: {},
+          },
+          history: {
+            canUndo: false,
+            canRedo: false,
+            undoCount: 0,
+            redoCount: 0,
+          },
+          isDirty: false,
         },
         diagnostics: [],
       };

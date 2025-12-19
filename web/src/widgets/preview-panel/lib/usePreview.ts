@@ -11,6 +11,8 @@ export const previewKeys = {
     [...previewKeys.all, 'sd', projectId, profileId] as const,
   fsh: (projectId: string, profileId: string) =>
     [...previewKeys.all, 'fsh', projectId, profileId] as const,
+  inputIt: (projectId: string, profileId: string) =>
+    [...previewKeys.all, 'inputIt', projectId, profileId] as const,
 };
 
 /** Normalized preview data for components */
@@ -27,20 +29,14 @@ export function useSDJsonPreview(projectId: string, profileId: string) {
   return useQuery({
     queryKey: previewKeys.sd(projectId, profileId),
     queryFn: async (): Promise<PreviewData> => {
-      console.log('[useSDJsonPreview] Fetching SD for:', { projectId, profileId });
       const response = await api.export.toSD(projectId, profileId);
-      console.log('[useSDJsonPreview] Raw API response:', response);
-      // Transform: content is JSON object, stringify it for display
-      const content =
-        typeof response.content === 'string'
-          ? response.content
-          : JSON.stringify(response.content, null, 2);
-      const result = {
+      // API returns { data: {...}, metadata: {...} }
+      const sdData = response.data ?? response.content;
+      const content = typeof sdData === 'string' ? sdData : JSON.stringify(sdData, null, 2);
+      return {
         content,
         filename: response.metadata?.filename ?? `${profileId}.json`,
       };
-      console.log('[useSDJsonPreview] Transformed result:', result);
-      return result;
     },
     enabled: !!projectId && !!profileId,
     staleTime: 30 * 1000, // 30 seconds - preview should be relatively fresh
@@ -56,13 +52,33 @@ export function useFSHPreview(projectId: string, profileId: string) {
     queryKey: previewKeys.fsh(projectId, profileId),
     queryFn: async (): Promise<PreviewData> => {
       const response = await api.export.toFSH(projectId, profileId);
+      // API returns { data: string, metadata: {...} }
       return {
-        content: response.content,
+        content: response.data ?? response.content ?? '',
         filename: response.metadata?.filename ?? `${profileId}.fsh`,
       };
     },
     enabled: !!projectId && !!profileId,
     staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Hook for fetching Input IT (original StructureDefinition resource)
+ */
+export function useInputItPreview(projectId: string, profileId: string) {
+  return useQuery({
+    queryKey: previewKeys.inputIt(projectId, profileId),
+    queryFn: async (): Promise<PreviewData> => {
+      const response = await api.resources.getInputIt(projectId, profileId);
+      const content = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
+      return {
+        content,
+        filename: `${profileId}-input.json`,
+      };
+    },
+    enabled: !!projectId && !!profileId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - input IT doesn't change
   });
 }
 

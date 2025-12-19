@@ -554,8 +554,8 @@ export const usCorePatient: Profile = {
                   children: [],
                 },
               ],
-            }
-          ]
+            },
+          ],
         },
         {
           id: 'Patient.identifier',
@@ -665,8 +665,7 @@ export const clCorePatient: Profile = {
                   min: 1,
                   max: '1',
                   short: 'URL de extensión nacionalidad',
-                  definition:
-                    'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CodigoPaises',
+                  definition: 'https://hl7chile.cl/fhir/ig/clcore/StructureDefinition/CodigoPaises',
                   type: [{ code: 'uri' }],
                   isModified: true,
                   children: [],
@@ -755,10 +754,10 @@ export const clCorePatient: Profile = {
               path: 'Patient.name.use',
               min: 0,
               max: '1',
-              short: "usual | official | temp | nickname | anonymous | old | maiden",
+              short: 'usual | official | temp | nickname | anonymous | old | maiden',
               definition: 'Identifies the purpose for this name.',
               comment:
-                "Applications can assume that a name is current unless it explicitly says that it is temporary or old.",
+                'Applications can assume that a name is current unless it explicitly says that it is temporary or old.',
               binding: {
                 strength: 'required',
                 valueSet: 'http://hl7.org/fhir/ValueSet/name-use',
@@ -854,10 +853,8 @@ export const clCorePatient: Profile = {
                   min: 1,
                   max: '1',
                   short: 'Uso del nombre',
-                  comment:
-                    'Para ser considerado como nombre social, el use DEBE ser "usual".',
-                  definition:
-                    'Uso se fuerza a usual para identificar el slice de nombre social.',
+                  comment: 'Para ser considerado como nombre social, el use DEBE ser "usual".',
+                  definition: 'Uso se fuerza a usual para identificar el slice de nombre social.',
                   mustSupport: true,
                   isModified: true,
                   children: [],
@@ -892,8 +889,7 @@ export const clCorePatient: Profile = {
                   min: 1,
                   max: '1',
                   short: 'Uso del nombre oficial',
-                  comment:
-                    'Para ser considerado como nombre oficial, el use DEBE ser "official".',
+                  comment: 'Para ser considerado como nombre oficial, el use DEBE ser "official".',
                   definition:
                     'Slice corresponde al nombre registrado al nacer, use se fuerza a official.',
                   mustSupport: true,
@@ -943,8 +939,7 @@ export const clCorePatient: Profile = {
                           min: 0,
                           max: '1',
                           short: 'Extensión segundo apellido',
-                          definition:
-                            'Extensión para la declaración de un segundo apellido.',
+                          definition: 'Extensión para la declaración de un segundo apellido.',
                           isModified: true,
                           children: [
                             {
@@ -1049,8 +1044,7 @@ export const clCorePatient: Profile = {
                       min: 0,
                       max: '1',
                       short: 'Sistema de identificación de tipos de documentos',
-                      comment:
-                        'Ejemplo: Cédula chilena NNCL; Pasaporte usa PPT según VS.',
+                      comment: 'Ejemplo: Cédula chilena NNCL; Pasaporte usa PPT según VS.',
                       definition:
                         'Sistema mediante el cual se obtienen los códigos para un determinado tipo de documento.',
                       mustSupport: true,

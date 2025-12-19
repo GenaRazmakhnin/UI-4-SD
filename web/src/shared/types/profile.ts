@@ -2,6 +2,14 @@ export type ProfileStatus = 'draft' | 'active' | 'retired';
 export type FhirVersion = '4.0.1' | '4.3.0' | '5.0.0';
 export type DerivationType = 'constraint' | 'specialization';
 
+/**
+ * Element source tracking - matches backend ElementSource
+ * - 'Base': Inherited from base profile, unchanged
+ * - 'Modified': Inherited from base but modified in this profile
+ * - 'Added': New element added in this profile (e.g., slice, extension)
+ */
+export type ElementSource = 'Base' | 'Modified' | 'Added';
+
 export interface Profile {
   id: string;
   url: string;
@@ -24,7 +32,8 @@ export interface ElementNode {
   path: string;
   sliceName?: string;
   min: number;
-  max: string;
+  /** Max cardinality - can be number (e.g., 1) or string (e.g., "*") or null for unbounded */
+  max: string | number | null;
   type?: TypeConstraint[];
   binding?: BindingConstraint;
   slicing?: SlicingRules;
@@ -34,8 +43,20 @@ export interface ElementNode {
   short?: string;
   definition?: string;
   comment?: string;
-  isModified: boolean;
+  /** Source tracking - matches backend ElementSource */
+  source: ElementSource;
+  /** @deprecated Use source instead - kept for backwards compatibility */
+  isModified?: boolean;
   children: ElementNode[];
+}
+
+/**
+ * Helper to format cardinality max value for display.
+ * Handles number, string, null, and undefined.
+ */
+export function formatMaxCardinality(max: string | number | null | undefined): string {
+  if (max === null || max === undefined) return '*';
+  return String(max);
 }
 
 export interface TypeConstraint {

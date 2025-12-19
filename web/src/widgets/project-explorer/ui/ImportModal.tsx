@@ -102,14 +102,29 @@ export function ImportModal({ opened, onClose, projectId, onImported }: ImportMo
       });
     },
     onSuccess: (data) => {
-      setDiagnostics(data.diagnostics);
+      const importDiagnostics = data.diagnostics ?? [];
+      setDiagnostics(importDiagnostics);
 
-      const hasErrors = data.diagnostics.some((d) => d.severity === 'error');
+      const hasErrors = importDiagnostics.some((d) => d.severity === 'error');
 
-      if (!hasErrors) {
+      // Handle the actual response structure from backend
+      // The profile is nested with metadata containing id and name
+      const profileData = data.profile as
+        | {
+            metadata?: { id?: string; name?: string };
+            documentId?: string;
+          }
+        | { id?: string; name?: string }
+        | undefined;
+
+      const profileId = profileData?.metadata?.id ?? (profileData as { id?: string })?.id;
+      const profileName =
+        profileData?.metadata?.name ?? (profileData as { name?: string })?.name ?? 'Profile';
+
+      if (!hasErrors && profileId) {
         notifications.show({
           title: 'Import successful',
-          message: `Profile "${data.profile.name}" imported successfully.`,
+          message: `Profile "${profileName}" imported successfully.`,
           icon: createElement(IconCheck, { size: 16 }),
           color: 'green',
         });
@@ -120,11 +135,19 @@ export function ImportModal({ opened, onClose, projectId, onImported }: ImportMo
         form.reset();
         setDiagnostics([]);
         onClose();
-        onImported?.(data.profile.id);
-      } else {
+        onImported?.(profileId);
+      } else if (hasErrors) {
         notifications.show({
           title: 'Import completed with errors',
           message: 'Check the diagnostics for details.',
+          icon: createElement(IconAlertCircle, { size: 16 }),
+          color: 'yellow',
+        });
+      } else {
+        // No errors but no profile - unexpected response
+        notifications.show({
+          title: 'Import issue',
+          message: 'Import completed but no profile was returned.',
           icon: createElement(IconAlertCircle, { size: 16 }),
           color: 'yellow',
         });

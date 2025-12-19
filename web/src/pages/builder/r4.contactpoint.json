@@ -1,82 +1,82 @@
 {
-    "url": "http://hl7.org/fhir/StructureDefinition/ContactPoint",
-    "derivedFrom": "StructureDefinition/4611bc90-2a92-432d-ac08-bcaa80fbd5c3",
-    "constraints": {
-      "cpt-2": {
-        "human": "A system is required if a value is provided.",
-        "severity": "error",
-        "expression": "value.empty() or system.exists()"
-      }
+  "url": "http://hl7.org/fhir/StructureDefinition/ContactPoint",
+  "derivedFrom": "StructureDefinition/4611bc90-2a92-432d-ac08-bcaa80fbd5c3",
+  "constraints": {
+    "cpt-2": {
+      "human": "A system is required if a value is provided.",
+      "severity": "error",
+      "expression": "value.empty() or system.exists()"
+    }
+  },
+  "id": "974f3250-9550-4166-894b-1a4b4beb6454",
+  "base": "http://hl7.org/fhir/StructureDefinition/Element",
+  "name": "ContactPoint",
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+      "valueCode": "normative"
     },
-    "id": "974f3250-9550-4166-894b-1a4b4beb6454",
-    "base": "http://hl7.org/fhir/StructureDefinition/Element",
-    "name": "ContactPoint",
-    "extension": [
-      {
-        "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
-        "valueCode": "normative"
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "4.0.0"
+    }
+  ],
+  "kind": "complex-type",
+  "type": "ContactPoint",
+  "version": "4.0.1",
+  "resourceType": "FHIRSchema",
+  "elements": {
+    "use": {
+      "binding": {
+        "strength": "required",
+        "valueSet": "http://hl7.org/fhir/ValueSet/contact-point-use",
+        "valueSetVersion": "4.0.1"
       },
-      {
-        "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
-        "valueCode": "4.0.0"
-      }
-    ],
-    "kind": "complex-type",
-    "type": "ContactPoint",
-    "version": "4.0.1",
-    "resourceType": "FHIRSchema",
-    "elements": {
-      "use": {
-        "binding": {
-          "strength": "required",
-          "valueSet": "http://hl7.org/fhir/ValueSet/contact-point-use",
-          "valueSetVersion": "4.0.1"
-        },
-        "scalar": true,
-        "requirements": "Need to track the way a person uses this contact, so a user can choose which is appropriate for their purpose.",
-        "short": "home | work | temp | old | mobile - purpose of this contact point",
-        "summary": true,
-        "modifier": true,
-        "definition": "Identifies the purpose for the contact point.",
-        "type": "code",
-        "comment": "Applications can assume that a contact is current unless it explicitly says that it is temporary or old."
-      },
-      "rank": {
-        "type": "positiveInt",
-        "short": "Specify preferred order of use (1 = highest)",
-        "scalar": true,
-        "comment": "Note that rank does not necessarily follow the order in which the contacts are represented in the instance.",
-        "summary": true,
-        "definition": "Specifies a preferred order in which to use a set of contacts. ContactPoints with lower rank values are more preferred than those with higher rank values."
-      },
-      "value": {
-        "type": "string",
-        "short": "The actual contact point details",
-        "scalar": true,
-        "comment": "Additional text data such as phone extension numbers, or notes about use of the contact are sometimes included in the value.",
-        "summary": true,
-        "definition": "The actual contact point details, in a form that is meaningful to the designated communication system (i.e. phone number or email address).",
-        "requirements": "Need to support legacy numbers that are not in a tightly controlled format."
-      },
-      "period": {
-        "type": "Period",
-        "short": "Time period when the contact point was/is in use",
-        "scalar": true,
-        "summary": true,
-        "definition": "Time period when the contact point was/is in use."
-      },
-      "system": {
-        "type": "code",
-        "short": "phone | fax | email | pager | url | sms | other",
-        "scalar": true,
-        "binding": {
-          "strength": "required",
-          "valueSet": "http://hl7.org/fhir/ValueSet/contact-point-system",
-          "valueSetVersion": "4.0.1"
-        },
-        "summary": true,
-        "definition": "Telecommunications form for contact point - what communications system is required to make use of the contact."
-      }
+      "scalar": true,
+      "requirements": "Need to track the way a person uses this contact, so a user can choose which is appropriate for their purpose.",
+      "short": "home | work | temp | old | mobile - purpose of this contact point",
+      "summary": true,
+      "modifier": true,
+      "definition": "Identifies the purpose for the contact point.",
+      "type": "code",
+      "comment": "Applications can assume that a contact is current unless it explicitly says that it is temporary or old."
     },
-    "derivation": "specialization"
-  }
+    "rank": {
+      "type": "positiveInt",
+      "short": "Specify preferred order of use (1 = highest)",
+      "scalar": true,
+      "comment": "Note that rank does not necessarily follow the order in which the contacts are represented in the instance.",
+      "summary": true,
+      "definition": "Specifies a preferred order in which to use a set of contacts. ContactPoints with lower rank values are more preferred than those with higher rank values."
+    },
+    "value": {
+      "type": "string",
+      "short": "The actual contact point details",
+      "scalar": true,
+      "comment": "Additional text data such as phone extension numbers, or notes about use of the contact are sometimes included in the value.",
+      "summary": true,
+      "definition": "The actual contact point details, in a form that is meaningful to the designated communication system (i.e. phone number or email address).",
+      "requirements": "Need to support legacy numbers that are not in a tightly controlled format."
+    },
+    "period": {
+      "type": "Period",
+      "short": "Time period when the contact point was/is in use",
+      "scalar": true,
+      "summary": true,
+      "definition": "Time period when the contact point was/is in use."
+    },
+    "system": {
+      "type": "code",
+      "short": "phone | fax | email | pager | url | sms | other",
+      "scalar": true,
+      "binding": {
+        "strength": "required",
+        "valueSet": "http://hl7.org/fhir/ValueSet/contact-point-system",
+        "valueSetVersion": "4.0.1"
+      },
+      "summary": true,
+      "definition": "Telecommunications form for contact point - what communications system is required to make use of the contact."
+    }
+  },
+  "derivation": "specialization"
+}

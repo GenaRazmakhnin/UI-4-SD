@@ -366,6 +366,15 @@ export const realApi = {
     },
   },
 
+  // Fetch the original input IT resource
+  resources: {
+    async getInputIt(projectId: string, profileId: string): Promise<unknown> {
+      return apiClient.get<unknown>(
+        `/api/projects/${projectId}/profiles/${encodeURIComponent(profileId)}/input-it`
+      );
+    },
+  },
+
   // Project-scoped export APIs
   export: {
     /** Export profile as StructureDefinition JSON */

@@ -3,6 +3,7 @@ import {
   IconArrowsMaximize,
   IconArrowsMinimize,
   IconCode,
+  IconFileImport,
   IconFlask2,
   IconSchema,
   IconSparkles,
@@ -10,10 +11,11 @@ import {
 import { useState } from 'react';
 import { DiffView } from './DiffView';
 import { FSHPreview } from './FSHPreview';
+import { InputItPreview } from './InputItPreview';
 import styles from './PreviewPanel.module.css';
 import { SDJsonPreview } from './SDJsonPreview';
 
-export type PreviewTab = 'json' | 'fsh' | 'diff' | 'schema';
+export type PreviewTab = 'json' | 'fsh' | 'diff' | 'inputIt' | 'schema';
 
 export interface PreviewPanelProps {
   projectId: string;
@@ -76,6 +78,12 @@ export function PreviewPanel({ projectId, profileId, baseContent = '' }: Preview
           <Tabs.Tab value="json">SD JSON</Tabs.Tab>
           <Tabs.Tab value="fsh">FSH</Tabs.Tab>
           <Tabs.Tab value="diff">Diff</Tabs.Tab>
+          <Tabs.Tab value="inputIt">
+            <Group gap={6}>
+              <IconFileImport size={14} />
+              <span>Input IT</span>
+            </Group>
+          </Tabs.Tab>
           <Tabs.Tab value="schema">
             <Group gap={6}>
               <IconSchema size={14} />
@@ -115,6 +123,15 @@ export function PreviewPanel({ projectId, profileId, baseContent = '' }: Preview
             projectId={projectId}
             profileId={profileId}
             baseContent={baseContent}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={handleToggleFullscreen}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="inputIt">
+          <InputItPreview
+            projectId={projectId}
+            profileId={profileId}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
           />

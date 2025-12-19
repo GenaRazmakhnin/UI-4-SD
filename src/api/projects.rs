@@ -28,6 +28,8 @@ use crate::project::{
 };
 use crate::state::AppState;
 
+use super::dto::ApiResponse;
+
 /// Create project routes.
 pub fn project_routes() -> Router<AppState> {
     Router::new()
@@ -65,43 +67,7 @@ pub struct ResourcePath {
 }
 
 // === Response Types ===
-
-/// API response wrapper.
-#[derive(Debug, Serialize)]
-pub struct ApiResponse<T> {
-    pub success: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorInfo>,
-}
-
-impl<T> ApiResponse<T> {
-    pub fn ok(data: T) -> Self {
-        Self {
-            success: true,
-            data: Some(data),
-            error: None,
-        }
-    }
-
-    pub fn error(code: impl Into<String>, message: impl Into<String>) -> ApiResponse<()> {
-        ApiResponse {
-            success: false,
-            data: None,
-            error: Some(ErrorInfo {
-                code: code.into(),
-                message: message.into(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct ErrorInfo {
-    pub code: String,
-    pub message: String,
-}
+// Note: ApiResponse and ErrorInfo are imported from super::dto
 
 /// Project list response.
 #[derive(Debug, Serialize)]

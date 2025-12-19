@@ -157,7 +157,7 @@ async fn export_sd(
 
     // Build response with proper headers
     let response = SdExportResponse {
-        content: json_value,
+        data: json_value,
         metadata,
         diagnostics: validation.diagnostics,
     };
@@ -324,7 +324,7 @@ async fn export_fsh(
     };
 
     let response = FshExportResponse {
-        content: fsh_content,
+        data: fsh_content,
         metadata,
         diagnostics: validation.diagnostics,
     };

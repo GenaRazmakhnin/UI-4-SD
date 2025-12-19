@@ -99,12 +99,21 @@ function transformElementNode(node: any): ElementNode {
           description: node.constraints.binding.description,
         }
       : undefined,
+    slicing: node.constraints?.slicing
+      ? {
+          discriminator: node.constraints.slicing.discriminator ?? [],
+          rules: node.constraints.slicing.rules ?? 'open',
+          ordered: node.constraints.slicing.ordered ?? false,
+          description: node.constraints.slicing.description,
+        }
+      : undefined,
     mustSupport: node.constraints?.flags?.mustSupport ?? node.mustSupport,
     isModifier: node.constraints?.flags?.isModifier ?? node.isModifier,
     isSummary: node.constraints?.flags?.isSummary ?? node.isSummary,
     short: node.constraints?.short ?? node.short,
     definition: node.constraints?.definition ?? node.definition,
     comment: node.constraints?.comment ?? node.comment,
+    source: node.source ?? 'Base',
     isModified: node.source === 'Modified' || node.isModified === true,
     children: (node.children || []).map(transformElementNode),
   };
@@ -203,21 +212,17 @@ export const $flattenedElements = combine(
         }
 
         const isNonExtensionSlicing = !!node.slicing && !node.path.endsWith('extension');
-        const currentView = isNonExtensionSlicing ? sliceViews[node.path] ?? 'base' : 'base';
-        const sliceChildren = isNonExtensionSlicing
-          ? node.children.filter((c) => c.sliceName)
-          : [];
+        const currentView = isNonExtensionSlicing ? (sliceViews[node.path] ?? 'base') : 'base';
+        const sliceChildren = isNonExtensionSlicing ? node.children.filter((c) => c.sliceName) : [];
         const baseChildren = isNonExtensionSlicing
           ? node.children.filter((c) => !c.sliceName)
           : node.children;
 
         const matchedSlice =
-          currentView !== 'base'
-            ? sliceChildren.find((c) => c.sliceName === currentView)
-            : null;
+          currentView !== 'base' ? sliceChildren.find((c) => c.sliceName === currentView) : null;
 
         const childrenFromSlice =
-          isNonExtensionSlicing && currentView !== 'base' ? matchedSlice?.children ?? [] : [];
+          isNonExtensionSlicing && currentView !== 'base' ? (matchedSlice?.children ?? []) : [];
 
         let childrenToRender: ElementNode[] = baseChildren;
 
@@ -243,7 +248,11 @@ export const $flattenedElements = combine(
           node.path.endsWith('extension') &&
           node.children.length > 0 &&
           node.children.every(
-            (c) => (c.path.endsWith('.url') || c.path.endsWith('.value[x]') || c.path.endsWith('.value')) && c.children.length === 0
+            (c) =>
+              (c.path.endsWith('.url') ||
+                c.path.endsWith('.value[x]') ||
+                c.path.endsWith('.value')) &&
+              c.children.length === 0
           );
         if (isSimpleExtension) {
           childrenToRender = [];
@@ -269,8 +278,8 @@ export const $flattenedElements = combine(
             node.sliceName && node.path.endsWith('extension')
               ? node.sliceName
               : isNonExtensionSlicing && currentView !== 'base'
-              ? `${node.path.split('.').slice(-1)[0]}:${currentView}`
-              : undefined,
+                ? `${node.path.split('.').slice(-1)[0]}:${currentView}`
+                : undefined,
         } as ElementNode & { __depth?: number; __displayName?: string };
 
         const isExpanded = expanded.has(node.path);

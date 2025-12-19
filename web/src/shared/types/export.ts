@@ -18,14 +18,16 @@ export interface ExportMetadata {
 
 /** SD export response */
 export interface SdExportResponse {
-  content: unknown;
+  /** The StructureDefinition JSON object */
+  data: unknown;
   metadata: ExportMetadata;
   diagnostics?: ExportDiagnostic[];
 }
 
 /** FSH export response */
 export interface FshExportResponse {
-  content: string;
+  /** The FSH content string */
+  data: string;
   metadata: ExportMetadata;
   diagnostics?: ExportDiagnostic[];
 }
@@ -141,15 +143,40 @@ export interface ImportDiagnostic {
   path?: string;
 }
 
-/** Import response from backend */
+/** Import response from backend - matches backend ImportResponse */
 export interface ImportProfileResponse {
-  /** Imported profile details */
+  /** Full profile details (matches ProfileDetailsResponse from projects API) */
   profile: {
-    id: string;
-    name: string;
-    url: string;
-    status: string;
-    baseDefinition: string;
+    documentId: string;
+    metadata: {
+      id: string;
+      url: string;
+      name: string;
+      title?: string;
+      description?: string;
+      status: string;
+      version?: string;
+      publisher?: string;
+      purpose?: string;
+      copyright?: string;
+      experimental?: boolean;
+    };
+    resource: {
+      url: string;
+      version?: string;
+      fhirVersion: string;
+      base: { url: string; type?: string };
+      kind: string;
+      root: unknown; // Element tree - use BackendElementNode from projects.ts for full typing
+    };
+    history: {
+      canUndo: boolean;
+      canRedo: boolean;
+      undoCount: number;
+      redoCount: number;
+    };
+    isDirty: boolean;
+    filePath?: string;
   };
   /** Import diagnostics */
   diagnostics: ImportDiagnostic[];

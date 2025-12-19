@@ -6,8 +6,8 @@ import { List } from 'react-window';
 import {
   $expandedPaths,
   $flattenedElements,
-  $sliceViews,
   $selectedElementId,
+  $sliceViews,
   elementSelected,
   pathToggled,
   sliceViewChanged,

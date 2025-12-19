@@ -28,6 +28,7 @@ pub fn profile_routes() -> Router<AppState> {
         .route("/{profileId}/metadata", patch(update_metadata))
         .route("/{profileId}/elements/{*path}", patch(update_element))
         .route("/{profileId}/import", post(import_profile))
+        .route("/{profileId}/input-it", get(get_input_it))
 }
 
 /// Path parameters for project-scoped routes.
@@ -287,6 +288,56 @@ async fn get_profile(
             Json(ApiResponse::ok(response)).into_response()
         }
         Err(e) => Into::<(StatusCode, Json<ErrorResponse>)>::into(e).into_response(),
+    }
+}
+
+/// GET /api/projects/:projectId/profiles/:profileId/input-it
+/// Get the original input StructureDefinition resource.
+async fn get_input_it(
+    State(state): State<AppState>,
+    Path(params): Path<ProfilePath>,
+) -> impl IntoResponse {
+    use tokio::fs;
+
+    let project_dir = state.project_path(&params.project_id);
+    let storage = ProfileStorage::new(&project_dir);
+
+    // First load the profile to get its name
+    let doc = match storage.load_profile(&params.profile_id).await {
+        Ok(d) => d,
+        Err(e) => return Into::<(StatusCode, Json<ErrorResponse>)>::into(e).into_response(),
+    };
+
+    // Try to find the original SD JSON file
+    let sd_dir = project_dir.join("SD").join("StructureDefinition");
+    let sd_path = sd_dir.join(format!("{}.json", doc.metadata.name));
+
+    match fs::read_to_string(&sd_path).await {
+        Ok(content) => {
+            // Parse and return as JSON
+            match serde_json::from_str::<serde_json::Value>(&content) {
+                Ok(json) => Json(json).into_response(),
+                Err(_) => {
+                    // Return as raw string if not valid JSON
+                    content.into_response()
+                }
+            }
+        }
+        Err(_) => {
+            // Try alternative path with profile ID
+            let alt_path = sd_dir.join(format!("{}.json", params.profile_id));
+            match fs::read_to_string(&alt_path).await {
+                Ok(content) => {
+                    match serde_json::from_str::<serde_json::Value>(&content) {
+                        Ok(json) => Json(json).into_response(),
+                        Err(_) => content.into_response(),
+                    }
+                }
+                Err(_) => {
+                    ErrorResponse::not_found("Input IT", &params.profile_id).into_response()
+                }
+            }
+        }
     }
 }
 

@@ -180,10 +180,10 @@ export const projectsApi = {
 
   /** Get a profile's details including element tree */
   async getProfile(projectId: string, profileId: string): Promise<ProfileDetailsResponse> {
-    const response = await apiClient.get<ApiResponse<ProfileDetailsResponse>>(
+    // apiClient.get already unwraps the { success, data } wrapper
+    return apiClient.get<ProfileDetailsResponse>(
       `/api/projects/${projectId}/profiles/${encodeURIComponent(profileId)}`
     );
-    return response.data;
   },
 
   /** Update a profile's metadata */

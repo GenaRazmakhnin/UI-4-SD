@@ -12,34 +12,69 @@ use crate::ir::{
 
 // === Response Wrapper ===
 
+/// Error information for failed responses.
+#[derive(Debug, Clone, Serialize)]
+pub struct ErrorInfo {
+    /// Error code for programmatic handling.
+    pub code: String,
+    /// Human-readable error message.
+    pub message: String,
+}
+
 /// Standard API response wrapper.
+/// Matches frontend expectations: { success, data?, error?, diagnostics?, metadata? }
 #[derive(Debug, Serialize)]
 pub struct ApiResponse<T> {
-    /// Response data.
-    pub data: T,
-    /// Diagnostics (warnings, errors).
+    /// Whether the request was successful.
+    pub success: bool,
+    /// Response data (present on success).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<T>,
+    /// Error info (present on failure).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<ErrorInfo>,
+    /// Diagnostics (warnings, validation messages).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub diagnostics: Vec<Diagnostic>,
     /// Response metadata.
-    pub metadata: ResponseMetadata,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<ResponseMetadata>,
 }
 
 impl<T> ApiResponse<T> {
     /// Create a successful response.
     pub fn ok(data: T) -> Self {
         Self {
-            data,
+            success: true,
+            data: Some(data),
+            error: None,
             diagnostics: Vec::new(),
-            metadata: ResponseMetadata::now(),
+            metadata: Some(ResponseMetadata::now()),
         }
     }
 
     /// Create a response with diagnostics.
     pub fn with_diagnostics(data: T, diagnostics: Vec<Diagnostic>) -> Self {
         Self {
-            data,
+            success: true,
+            data: Some(data),
+            error: None,
             diagnostics,
-            metadata: ResponseMetadata::now(),
+            metadata: Some(ResponseMetadata::now()),
+        }
+    }
+
+    /// Create an error response.
+    pub fn error(code: impl Into<String>, message: impl Into<String>) -> ApiResponse<()> {
+        ApiResponse {
+            success: false,
+            data: None,
+            error: Some(ErrorInfo {
+                code: code.into(),
+                message: message.into(),
+            }),
+            diagnostics: Vec::new(),
+            metadata: None,
         }
     }
 }
@@ -460,8 +495,20 @@ mod tests {
     #[test]
     fn test_api_response_creation() {
         let response = ApiResponse::ok("test data");
-        assert_eq!(response.data, "test data");
+        assert!(response.success);
+        assert_eq!(response.data.unwrap(), "test data");
         assert!(response.diagnostics.is_empty());
+        assert!(response.error.is_none());
+    }
+
+    #[test]
+    fn test_api_response_error() {
+        let response = ApiResponse::<()>::error("TEST_ERROR", "Something went wrong");
+        assert!(!response.success);
+        assert!(response.data.is_none());
+        let error = response.error.unwrap();
+        assert_eq!(error.code, "TEST_ERROR");
+        assert_eq!(error.message, "Something went wrong");
     }
 
     #[test]

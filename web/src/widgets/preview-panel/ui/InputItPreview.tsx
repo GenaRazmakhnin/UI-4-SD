@@ -2,24 +2,24 @@ import { Alert, Center, Loader, Stack, Text } from '@mantine/core';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { IconAlertCircle, IconCode } from '@tabler/icons-react';
 import { useCallback, useRef, useState } from 'react';
-import { useSDJsonPreview } from '../lib/usePreview';
+import { useInputItPreview } from '../lib/usePreview';
 import styles from './PreviewPanel.module.css';
 import { PreviewToolbar } from './PreviewToolbar';
 
-export interface SDJsonPreviewProps {
+export interface InputItPreviewProps {
   projectId: string;
   profileId: string;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
 }
 
-export function SDJsonPreview({
+export function InputItPreview({
   projectId,
   profileId,
   isFullscreen,
   onToggleFullscreen,
-}: SDJsonPreviewProps) {
-  const { data, isLoading, error } = useSDJsonPreview(projectId, profileId);
+}: InputItPreviewProps) {
+  const { data, isLoading, error } = useInputItPreview(projectId, profileId);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLineNumbers, setShowLineNumbers] = useState(true);
@@ -40,7 +40,6 @@ export function SDJsonPreview({
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
     if (editorRef.current && query) {
-      // Trigger find widget
       const model = editorRef.current.getModel();
       if (model) {
         const matches = model.findMatches(query, true, false, false, null, true);
@@ -72,7 +71,7 @@ export function SDJsonPreview({
         <Stack align="center" gap="sm">
           <Loader size="lg" />
           <Text size="sm" c="dimmed">
-            Generating SD JSON...
+            Loading Input IT...
           </Text>
         </Stack>
       </Center>
@@ -82,7 +81,7 @@ export function SDJsonPreview({
   if (error) {
     return (
       <div className={styles.errorState}>
-        <Alert icon={<IconAlertCircle size={16} />} title="Failed to generate preview" color="red">
+        <Alert icon={<IconAlertCircle size={16} />} title="Failed to load Input IT" color="red">
           {error.message}
         </Alert>
       </div>
@@ -94,10 +93,10 @@ export function SDJsonPreview({
       <div className={styles.emptyState}>
         <IconCode size={48} stroke={1.5} />
         <Text size="lg" fw={500} mt="md">
-          No preview available
+          No Input IT available
         </Text>
         <Text size="sm" c="dimmed">
-          Select a profile to see the SD JSON preview
+          The original StructureDefinition resource is not available
         </Text>
       </div>
     );

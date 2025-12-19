@@ -1,0 +1,17 @@
+{
+  "id": "test",
+  "name": "test",
+  "canonicalBase": "http://test.ort",
+  "fhirVersion": "4.0.1",
+  "dependencies": [
+    {
+      "name": "hl7.fhir.r5.core",
+      "version": "5.0.0",
+      "dev": false
+    }
+  ],
+  "version": "0.1.0",
+  "status": "draft",
+  "createdAt": "2025-12-19T10:28:52.144363Z",
+  "modifiedAt": "2025-12-19T12:53:35.020409Z"
+}

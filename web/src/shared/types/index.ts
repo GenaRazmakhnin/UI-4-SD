@@ -60,6 +60,7 @@ export type {
   ContactPoint,
   DerivationType,
   ElementNode,
+  ElementSource,
   FhirVersion,
   Profile,
   ProfileStatus,
@@ -67,6 +68,7 @@ export type {
   SlicingRules,
   TypeConstraint,
 } from './profile';
+export { formatMaxCardinality } from './profile';
 export type { CreateProjectInput, Project, ProjectStatus, UpdateProjectInput } from './project';
 export type { ProjectResourceMetadata } from './resource';
 
