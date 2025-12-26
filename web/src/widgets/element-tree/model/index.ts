@@ -55,6 +55,11 @@ export const treeLoaded = createEvent<ElementNode[]>();
 export const profileContextUpdated = createEvent<Partial<ProfileContext>>();
 export const clearProfile = createEvent();
 export const sliceViewChanged = createEvent<{ path: string; view: SliceView }>();
+export const elementFieldChanged = createEvent<{
+  elementPath: string;
+  field: string;
+  value: string | number | boolean | undefined;
+}>();
 
 // Effects
 export const loadProfileFx = createEffect<
@@ -86,16 +91,16 @@ function transformElementNode(node: any): ElementNode {
   const baseChildren = (node.children || []).map(transformElementNode);
   const sliceChildren = node.slices
     ? Object.values(node.slices).map((slice: any) => {
-        const element = slice?.element ?? {};
-        const transformed = transformElementNode({
-          ...element,
-          source: element.source ?? slice.source,
-        });
-        return {
-          ...transformed,
-          sliceName: slice.name ?? transformed.sliceName,
-        };
-      })
+      const element = slice?.element ?? {};
+      const transformed = transformElementNode({
+        ...element,
+        source: element.source ?? slice.source,
+      });
+      return {
+        ...transformed,
+        sliceName: slice.name ?? transformed.sliceName,
+      };
+    })
     : [];
 
   return {
@@ -111,18 +116,18 @@ function transformElementNode(node: any): ElementNode {
     })),
     binding: node.constraints?.binding
       ? {
-          strength: node.constraints.binding.strength,
-          valueSet: node.constraints.binding.valueSet,
-          description: node.constraints.binding.description,
-        }
+        strength: node.constraints.binding.strength,
+        valueSet: node.constraints.binding.valueSet,
+        description: node.constraints.binding.description,
+      }
       : undefined,
     slicing: slicing
       ? {
-          discriminator: slicing.discriminator ?? [],
-          rules: slicing.rules ?? 'open',
-          ordered: slicing.ordered ?? false,
-          description: slicing.description,
-        }
+        discriminator: slicing.discriminator ?? [],
+        rules: slicing.rules ?? 'open',
+        ordered: slicing.ordered ?? false,
+        description: slicing.description,
+      }
       : undefined,
     mustSupport: node.constraints?.flags?.mustSupport ?? node.mustSupport,
     isModifier: node.constraints?.flags?.isModifier ?? node.isModifier,

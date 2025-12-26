@@ -21,5 +21,8 @@ export {
   searchExtensionsFx,
   searchQueryChanged,
   toggleFavorite,
+  pickerOpened,
+  pickerClosed,
+  $pickerOpen,
 } from './model';
 export { ExtensionPicker } from './ui/ExtensionPicker';

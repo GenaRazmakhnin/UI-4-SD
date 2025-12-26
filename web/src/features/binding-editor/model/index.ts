@@ -12,6 +12,15 @@ export const bindingChanged = createEvent<{
 }>();
 
 /**
+ * Browser open state
+ */
+export const browserOpened = createEvent();
+export const browserClosed = createEvent();
+export const $browserOpen = createStore(false)
+  .on(browserOpened, () => true)
+  .on(browserClosed, () => false);
+
+/**
  * Remove binding
  */
 export const removeBinding = createEvent<{
@@ -87,7 +96,7 @@ const updateBindingFx = createEffect(
   }: {
     profileId: string;
     elementPath: string;
-    binding: BindingConstraint | null;
+    binding: BindingConstraint | undefined;
   }) => {
     return await api.profiles.updateElement(profileId, elementPath, { binding });
   }
@@ -102,7 +111,7 @@ sample({
   filter: (element): element is ElementNode => element !== null,
   fn: (element, { binding }) => ({
     profileId: 'current-profile', // TODO: Get from profile context
-    elementPath: element.path,
+    elementPath: element!.path,
     binding,
   }),
   target: updateBindingFx,
@@ -117,8 +126,8 @@ sample({
   filter: (element): element is ElementNode => element !== null,
   fn: (element) => ({
     profileId: 'current-profile', // TODO: Get from profile context
-    elementPath: element.path,
-    binding: null,
+    elementPath: element!.path,
+    binding: undefined,
   }),
   target: updateBindingFx,
 });

@@ -1,0 +1,70 @@
+.container {
+    padding: var(--spacing-x3);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-x2);
+    margin-bottom: var(--spacing-x3);
+}
+
+.stats {
+    margin-bottom: var(--spacing-x3);
+}
+
+.statCard {
+    transition: all 150ms ease;
+}
+
+.statCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.section {
+    margin-bottom: var(--spacing-x3);
+}
+
+.projectCard {
+    cursor: pointer;
+    transition: all 150ms ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.projectCard:hover {
+    border-color: var(--color-brand-300);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.projectCard[data-featured] {
+    background: linear-gradient(135deg, var(--color-brand-50) 0%, var(--color-surface-0) 100%);
+    border-color: var(--color-brand-200);
+}
+
+.projectCard[data-featured]:hover {
+    border-color: var(--color-brand-400);
+}
+
+.errorCard {
+    background: var(--color-surface-alert);
+    border-color: var(--color-red-200);
+}
+
+.errorIcon {
+    color: var(--color-elements-alert);
+}
+
+.emptyCard {
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-surface-1) 0%, var(--color-surface-0) 100%);
+}

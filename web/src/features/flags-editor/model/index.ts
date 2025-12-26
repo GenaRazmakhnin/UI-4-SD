@@ -1,7 +1,8 @@
 import { api } from '@shared/api';
 import type { ElementNode } from '@shared/types';
-import { $selectedElement } from '@widgets/element-tree';
-import { createEffect, createEvent, sample } from 'effector';
+import { $profileContext, $selectedElement } from '@widgets/element-tree';
+import { profileChanged } from '@pages/editor/model';
+import { createEffect, createEvent, sample, combine } from 'effector';
 import { validateFlags } from '../lib/validation';
 
 /**
@@ -32,19 +33,20 @@ const updateFlagFx = createEffect(
 );
 
 /**
- * Handle flag changes
+ * Handle flag changes - use real profile context
  */
 sample({
   clock: flagChanged,
-  source: $selectedElement,
-  filter: (element): element is ElementNode => element !== null,
-  fn: (element, { flag, value }) => {
+  source: combine($selectedElement, $profileContext),
+  filter: ([element, context]): element is [ElementNode, NonNullable<typeof context>] =>
+    element !== null && context !== null,
+  fn: ([element, context], { flag, value }) => {
     const updates: Partial<ElementNode> = {
       [flag]: value,
     };
 
     return {
-      profileId: 'current-profile', // TODO: Get from profile context
+      profileId: context.profileId,
       elementPath: element.path,
       updates,
       element,
@@ -60,6 +62,8 @@ sample({
         elementPath,
         updates,
       });
+      // Fire profileChanged to mark as dirty
+      profileChanged();
     } else {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
     }

@@ -4,23 +4,23 @@
 //! and FSH formats with deterministic output, caching, and validation.
 
 use axum::{
+    Json, Router,
     body::Body,
     extract::{Path, Query, State},
     http::{
-        header::{self, HeaderMap, HeaderValue},
         StatusCode,
+        header::{self, HeaderMap, HeaderValue},
     },
     response::{IntoResponse, Response},
     routing::get,
-    Json, Router,
 };
 use sha2::{Digest, Sha256};
 use std::io::Write;
 use std::path::Path as FsPath;
 use zip::write::SimpleFileOptions;
 
-use crate::decompiler::{decompile_sd_value_to_fsh, DecompilerError};
-use crate::export::{merge_original_sd_fields, ExportConfig, StructureDefinitionExporter};
+use crate::decompiler::{DecompilerError, decompile_sd_value_to_fsh};
+use crate::export::{ExportConfig, StructureDefinitionExporter, merge_original_sd_fields};
 use crate::ir::ProfileDocument;
 use crate::state::AppState;
 
@@ -43,6 +43,7 @@ pub fn export_routes() -> Router<AppState> {
             "/{profileId}/export/fsh",
             get(export_fsh).head(export_fsh_headers),
         )
+        .route("/{profileId}/export/schema", get(export_schema))
         .route("/{profileId}/preview", get(preview))
 }
 
@@ -74,7 +75,7 @@ async fn export_sd(
     let doc = match storage.load_profile(&params.profile_id).await {
         Ok(d) => d,
         Err(StorageError::NotFound(_)) => {
-            return ErrorResponse::not_found("Profile", &params.profile_id).into_response()
+            return ErrorResponse::not_found("Profile", &params.profile_id).into_response();
         }
         Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
     };
@@ -122,12 +123,13 @@ async fn export_sd(
     let mut json_value = match exporter.export_value(&doc).await {
         Ok(v) => v,
         Err(e) => {
-            return ErrorResponse::internal_error(format!("Export failed: {}", e)).into_response()
+            return ErrorResponse::internal_error(format!("Export failed: {}", e)).into_response();
         }
     };
     merge_original_sd_for_export(&project_dir, &doc, &mut json_value).await;
 
     // Serialize for content and ETag
+    let json_value = crate::export::recursively_sort_value(&json_value);
     let json_string = if query.pretty {
         serde_json::to_string_pretty(&json_value).unwrap_or_default()
     } else {
@@ -217,7 +219,7 @@ async fn export_base_sd(
     let doc = match storage.load_profile(&params.profile_id).await {
         Ok(d) => d,
         Err(StorageError::NotFound(_)) => {
-            return ErrorResponse::not_found("Profile", &params.profile_id).into_response()
+            return ErrorResponse::not_found("Profile", &params.profile_id).into_response();
         }
         Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
     };
@@ -235,16 +237,16 @@ async fn export_base_sd(
         Ok(mgr) => mgr.clone(),
         Err(e) => {
             return ErrorResponse::internal_error(format!("Canonical manager error: {}", e))
-                .into_response()
+                .into_response();
         }
     };
     let resolver = crate::base::BaseResolver::new(canonical_manager);
 
     let json_value = match resolver.load_base_sd_json(&base_url).await {
-        Ok(v) => v,
+        Ok(v) => crate::export::recursively_sort_value(&v),
         Err(e) => {
             return ErrorResponse::internal_error(format!("Failed to load base SD: {}", e))
-                .into_response()
+                .into_response();
         }
     };
 
@@ -371,7 +373,7 @@ async fn export_fsh(
     let doc = match storage.load_profile(&params.profile_id).await {
         Ok(d) => d,
         Err(StorageError::NotFound(_)) => {
-            return ErrorResponse::not_found("Profile", &params.profile_id).into_response()
+            return ErrorResponse::not_found("Profile", &params.profile_id).into_response();
         }
         Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
     };
@@ -401,7 +403,7 @@ async fn export_fsh(
         Ok(fsh) => fsh,
         Err(e) => {
             return ErrorResponse::internal_error(format!("FSH decompilation failed: {}", e))
-                .into_response()
+                .into_response();
         }
     };
 
@@ -517,6 +519,126 @@ async fn export_fsh_headers(
         .into_response()
 }
 
+// === FHIR Schema Export (R4) ===
+
+/// GET /api/projects/:projectId/profiles/:profileId/export/schema
+///
+/// Export a profile as FHIR Schema JSON.
+async fn export_schema(
+    State(state): State<AppState>,
+    Path(params): Path<ProfilePath>,
+    Query(query): Query<FshExportQuery>, // Reuse FshExportQuery for persist/force
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let project_dir = state.project_path(&params.project_id);
+    let storage = ProfileStorage::new(&project_dir);
+
+    // Load profile
+    let doc = match storage.load_profile(&params.profile_id).await {
+        Ok(d) => d,
+        Err(StorageError::NotFound(_)) => {
+            return ErrorResponse::not_found("Profile", &params.profile_id).into_response();
+        }
+        Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
+    };
+
+    // Hydrate the profile
+    let doc = match hydrate_profile_document(&state, doc).await {
+        Ok(d) => d,
+        Err(e) => return e.into_response(),
+    };
+
+    // Validate before export
+    let validation = validate_for_export(&doc);
+    if !validation.can_export(query.force) {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({
+                "error": "Validation failed",
+                "code": "VALIDATION_ERROR",
+                "validation": validation
+            })),
+        )
+            .into_response();
+    }
+
+    // Export to SD JSON, then convert to FHIR Schema
+    let schema_content = match generate_fhirschema(&project_dir, &doc).await {
+        Ok(s) => s,
+        Err(e) => {
+            return ErrorResponse::internal_error(format!("FHIR Schema conversion failed: {}", e))
+                .into_response();
+        }
+    };
+
+    // Calculate ETag
+    let etag = calculate_etag(&schema_content);
+
+    // Check If-None-Match for caching
+    if let Some(if_none_match) = headers.get(header::IF_NONE_MATCH) {
+        if let Ok(value) = if_none_match.to_str() {
+            if value == etag || value == format!("\"{}\"", etag) {
+                return StatusCode::NOT_MODIFIED.into_response();
+            }
+        }
+    }
+
+    // Persist if requested
+    let persisted_path = if query.persist {
+        match storage
+            .save_sd_json(&format!("{}.schema", doc.metadata.name), &schema_content)
+            .await
+        {
+            Ok(path) => Some(path.display().to_string()),
+            Err(e) => {
+                tracing::warn!("Failed to persist FHIR Schema export: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    // Build metadata
+    let metadata = ExportMetadata {
+        resource_id: doc.metadata.id.clone(),
+        name: doc.metadata.name.clone(),
+        url: doc.metadata.url.clone(),
+        fhir_version: doc.resource.fhir_version.as_str().to_string(),
+        filename: format!("{}.schema.json", doc.metadata.name),
+        content_type: "application/schema+json".to_string(),
+        etag: etag.clone(),
+        persisted_path,
+    };
+
+    let response = SdExportResponse {
+        data: serde_json::from_str(&schema_content).unwrap_or(serde_json::Value::Null),
+        metadata,
+        diagnostics: validation.diagnostics,
+    };
+
+    let mut resp = Json(ApiResponse::ok(response)).into_response();
+    let headers = resp.headers_mut();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/schema+json"),
+    );
+    headers.insert(
+        header::ETAG,
+        HeaderValue::from_str(&format!("\"{}\"", etag)).unwrap(),
+    );
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&format!(
+            "attachment; filename=\"{}.schema.json\"",
+            doc.metadata.name
+        ))
+        .unwrap(),
+    );
+
+    resp
+}
+
 // === Bulk Export (R3) ===
 
 /// GET /api/projects/:projectId/export
@@ -585,7 +707,7 @@ async fn bulk_export_flat(
         let resource_name = doc.metadata.name.clone();
         let doc = match hydrate_profile_document(state, doc).await {
             Ok(d) => d,
-            Err(e) => {
+            Err(_e) => {
                 failed_count += 1;
                 diagnostics.push(ResourceDiagnostic {
                     resource_id,
@@ -657,13 +779,13 @@ async fn bulk_export_flat(
         // Export FSH if requested
         if matches!(query.format, BulkExportFormat::Fsh | BulkExportFormat::Both) {
             match generate_fsh_via_decompiler(&project_dir, &doc).await {
-                Ok(fsh_content) => {
+                Ok(content) => {
                     files.push(ExportedFile {
                         resource_id: doc.metadata.id.clone(),
                         name: doc.metadata.name.clone(),
                         path: format!("FSH/profiles/{}.fsh", doc.metadata.name),
                         format: "fsh".to_string(),
-                        content: fsh_content,
+                        content,
                         is_base64: false,
                     });
                 }
@@ -682,6 +804,37 @@ async fn bulk_export_flat(
             }
         }
 
+        // Export FHIR Schema if requested
+        if matches!(
+            query.format,
+            BulkExportFormat::FhirSchema | BulkExportFormat::Both
+        ) {
+            match generate_fhirschema(&project_dir, &doc).await {
+                Ok(content) => {
+                    files.push(ExportedFile {
+                        resource_id: doc.metadata.id.clone(),
+                        name: doc.metadata.name.clone(),
+                        path: format!("Schema/{}.schema.json", doc.metadata.name),
+                        format: "fhirschema".to_string(),
+                        content,
+                        is_base64: false,
+                    });
+                }
+                Err(e) => {
+                    diagnostics.push(ResourceDiagnostic {
+                        resource_id: doc.metadata.id.clone(),
+                        name: doc.metadata.name.clone(),
+                        diagnostics: vec![Diagnostic {
+                            severity: DiagnosticSeverity::Error,
+                            code: "SCHEMA_GEN_FAILED".to_string(),
+                            message: format!("FHIR Schema generation failed: {}", e),
+                            path: None,
+                        }],
+                    });
+                }
+            }
+        }
+
         success_count += 1;
         if !validation.diagnostics.is_empty() {
             diagnostics.push(resource_diag);
@@ -691,7 +844,12 @@ async fn bulk_export_flat(
     let formats = match query.format {
         BulkExportFormat::Sd => vec!["sd".to_string()],
         BulkExportFormat::Fsh => vec!["fsh".to_string()],
-        BulkExportFormat::Both => vec!["sd".to_string(), "fsh".to_string()],
+        BulkExportFormat::FhirSchema => vec!["fhirschema".to_string()],
+        BulkExportFormat::Both => vec![
+            "sd".to_string(),
+            "fsh".to_string(),
+            "fhirschema".to_string(),
+        ],
     };
 
     let response = BulkExportResponse {
@@ -778,17 +936,32 @@ async fn bulk_export_packaged(
                 match generate_fsh_via_decompiler(&project_dir, &doc).await {
                     Ok(fsh_content) => {
                         let path = format!("input/fsh/profiles/{}.fsh", doc.metadata.name);
-                        if let Err(e) = zip.start_file(&path, options) {
-                            tracing::warn!("Failed to add FSH to ZIP: {}", e);
-                            continue;
-                        }
-                        if let Err(e) = zip.write_all(fsh_content.as_bytes()) {
-                            tracing::warn!("Failed to write FSH content: {}", e);
-                            continue;
-                        }
+                        let _ = zip.start_file(&path, options);
+                        let _ = zip.write_all(fsh_content.as_bytes());
                     }
                     Err(e) => {
                         tracing::warn!("FSH decompilation failed for {}: {}", doc.metadata.name, e);
+                    }
+                }
+            }
+
+            // Export FHIR Schema if requested
+            if matches!(
+                query.format,
+                BulkExportFormat::FhirSchema | BulkExportFormat::Both
+            ) {
+                match generate_fhirschema(&project_dir, &doc).await {
+                    Ok(content) => {
+                        let path = format!("input/schema/{}.schema.json", doc.metadata.name);
+                        let _ = zip.start_file(&path, options);
+                        let _ = zip.write_all(content.as_bytes());
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "FHIR Schema generation failed for {}: {}",
+                            doc.metadata.name,
+                            e
+                        );
                     }
                 }
             }
@@ -804,7 +977,13 @@ async fn bulk_export_packaged(
             let _ = zip.write_all(ig_ini.as_bytes());
         }
 
-        if zip.start_file(&format!("input/ImplementationGuide-{}.json", project_id), options).is_ok() {
+        if zip
+            .start_file(
+                &format!("input/ImplementationGuide-{}.json", project_id),
+                options,
+            )
+            .is_ok()
+        {
             let _ = zip.write_all(ig_json.as_bytes());
         }
 
@@ -849,7 +1028,7 @@ async fn preview(
     let doc = match storage.load_profile(&params.profile_id).await {
         Ok(d) => d,
         Err(StorageError::NotFound(_)) => {
-            return ErrorResponse::not_found("Profile", &params.profile_id).into_response()
+            return ErrorResponse::not_found("Profile", &params.profile_id).into_response();
         }
         Err(e) => return ErrorResponse::internal_error(e.to_string()).into_response(),
     };
@@ -870,20 +1049,24 @@ async fn preview(
                 }
                 Err(e) => {
                     return ErrorResponse::internal_error(format!("Export failed: {}", e))
-                        .into_response()
+                        .into_response();
                 }
             }
         }
-        PreviewFormat::Fsh => {
-            let fsh = match generate_fsh_via_decompiler(&project_dir, &doc).await {
-                Ok(fsh) => fsh,
-                Err(e) => {
-                    return ErrorResponse::internal_error(format!("FSH decompilation failed: {}", e))
-                        .into_response()
-                }
-            };
-            (fsh, "fsh")
-        }
+        PreviewFormat::Fsh => match generate_fsh_via_decompiler(&project_dir, &doc).await {
+            Ok(content) => (content, "fsh"),
+            Err(e) => {
+                return ErrorResponse::internal_error(format!("Export failed: {}", e))
+                    .into_response();
+            }
+        },
+        PreviewFormat::FhirSchema => match generate_fhirschema(&project_dir, &doc).await {
+            Ok(content) => (content, "json"),
+            Err(e) => {
+                return ErrorResponse::internal_error(format!("Export failed: {}", e))
+                    .into_response();
+            }
+        },
     };
 
     // Generate syntax highlighting if requested
@@ -1071,6 +1254,33 @@ async fn generate_fsh_via_decompiler(
     decompile_sd_value_to_fsh(&sd_value, doc.resource.fhir_version).await
 }
 
+/// Generate FHIR Schema content using octofhir-fhirschema.
+async fn generate_fhirschema(
+    project_dir: &FsPath,
+    doc: &ProfileDocument,
+) -> Result<String, String> {
+    // Export with full snapshot as FHIR Schema converter usually needs it
+    let config = ExportConfig::default();
+    let mut exporter = StructureDefinitionExporter::with_config(config);
+
+    let mut sd_value = exporter
+        .export_value(doc)
+        .await
+        .map_err(|e| format!("SD export failed: {}", e))?;
+    merge_original_sd_for_export(project_dir, doc, &mut sd_value).await;
+
+    // Convert SD to FHIR Schema using translate function
+    // We need to deserialize into StructureDefinition struct first
+    let sd: octofhir_fhirschema::StructureDefinition = serde_json::from_value(sd_value)
+        .map_err(|e| format!("Deserialization failed for Schema conversion: {}", e))?;
+
+    let schema = octofhir_fhirschema::translate(sd, None)
+        .map_err(|e| format!("FHIR Schema conversion failed: {}", e))?;
+
+    // Return as pretty JSON
+    serde_json::to_string_pretty(&schema).map_err(|e| format!("Serialization failed: {}", e))
+}
+
 /// Generate basic syntax highlighting tokens.
 fn generate_highlighting(content: &str, language: &str) -> SyntaxHighlighting {
     let mut tokens = Vec::new();
@@ -1113,9 +1323,17 @@ fn generate_highlighting(content: &str, language: &str) -> SyntaxHighlighting {
                             end_column: i as u32,
                             token_type: token_type.to_string(),
                         });
-                    } else if chars[i].is_ascii_digit() || (chars[i] == '-' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) {
+                    } else if chars[i].is_ascii_digit()
+                        || (chars[i] == '-' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit())
+                    {
                         let start = i;
-                        while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.' || chars[i] == '-' || chars[i] == 'e' || chars[i] == 'E') {
+                        while i < chars.len()
+                            && (chars[i].is_ascii_digit()
+                                || chars[i] == '.'
+                                || chars[i] == '-'
+                                || chars[i] == 'e'
+                                || chars[i] == 'E')
+                        {
                             i += 1;
                         }
                         tokens.push(HighlightToken {
@@ -1124,7 +1342,10 @@ fn generate_highlighting(content: &str, language: &str) -> SyntaxHighlighting {
                             end_column: i as u32,
                             token_type: "number".to_string(),
                         });
-                    } else if content[i..].starts_with("true") || content[i..].starts_with("false") || content[i..].starts_with("null") {
+                    } else if content[i..].starts_with("true")
+                        || content[i..].starts_with("false")
+                        || content[i..].starts_with("null")
+                    {
                         let word_len = if chars[i..].starts_with(&['t', 'r', 'u', 'e']) {
                             4
                         } else if chars[i..].starts_with(&['f', 'a', 'l', 's', 'e']) {
@@ -1148,10 +1369,31 @@ fn generate_highlighting(content: &str, language: &str) -> SyntaxHighlighting {
         "fsh" => {
             // Simple FSH tokenization
             let keywords = [
-                "Profile", "Parent", "Id", "Title", "Description", "Extension",
-                "ValueSet", "CodeSystem", "Instance", "InstanceOf", "Usage",
-                "Alias", "Invariant", "Logical", "Resource", "RuleSet", "Mapping",
-                "Source", "Target", "from", "contains", "and", "or", "only", "MS",
+                "Profile",
+                "Parent",
+                "Id",
+                "Title",
+                "Description",
+                "Extension",
+                "ValueSet",
+                "CodeSystem",
+                "Instance",
+                "InstanceOf",
+                "Usage",
+                "Alias",
+                "Invariant",
+                "Logical",
+                "Resource",
+                "RuleSet",
+                "Mapping",
+                "Source",
+                "Target",
+                "from",
+                "contains",
+                "and",
+                "or",
+                "only",
+                "MS",
             ];
 
             for (line_num, line) in content.lines().enumerate() {

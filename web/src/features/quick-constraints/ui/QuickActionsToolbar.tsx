@@ -16,6 +16,8 @@ import {
   IconStar,
   IconStarFilled,
   IconTemplate,
+  IconAlertTriangle,
+  IconList,
 } from '@tabler/icons-react';
 import { useUnit } from 'effector-react';
 import type { QuickAction, QuickActionId } from '../lib/types';
@@ -42,6 +44,8 @@ const ACTION_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   IconTemplate,
   IconLock,
   IconShield,
+  IconAlertTriangle,
+  IconList,
 };
 
 interface QuickActionsToolbarProps {

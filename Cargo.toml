@@ -59,10 +59,13 @@ chrono = { version = "0.4", features = ["serde"] }
 indexmap = { version = "2.7", features = ["serde"] }
 
 # FHIR package management
-octofhir-canonical-manager = { version = "0.1.21", default-features = false, features = ["cli", "sqlite"] }
+octofhir-canonical-manager = { version = "0.1.23", default-features = false, features = ["cli", "sqlite"] }
 
 # FHIRPath engine for constraint validation and expression parsing
 octofhir-fhirpath = { version = "0.4.32" }
+
+# FHIRSchema for validation and conversion
+octofhir-fhirschema = { version = "0.3.10" }
 
 # Hashing for ETag generation
 sha2 = "0.10"

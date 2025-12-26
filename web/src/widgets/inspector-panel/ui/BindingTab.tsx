@@ -2,6 +2,9 @@ import { BindingEditor } from '@features/binding-editor';
 import { Alert, Stack, Text, Title } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
 import { IconAlertCircle } from '@tabler/icons-react';
+import { useUnit } from 'effector-react';
+import { $browserOpen, browserClosed, bindingChanged } from '@features/binding-editor';
+import { ValueSetBrowser } from '@features/binding-editor';
 
 interface BindingTabProps {
   element: ElementNode;
@@ -34,6 +37,22 @@ export function BindingTab({ element }: BindingTabProps) {
         )}
         <BindingEditor element={element} />
       </section>
+
+      {/* ValueSet Browser Modal */}
+      <ValueSetBrowser
+        opened={useUnit($browserOpen)}
+        onClose={() => browserClosed()}
+        onValueSetSelected={(url) => {
+          bindingChanged({
+            elementId: element.id,
+            binding: {
+              strength: 'required', // Default to required
+              valueSet: url,
+            },
+          });
+          browserClosed();
+        }}
+      />
     </Stack>
   );
 }

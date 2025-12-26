@@ -1,96 +1,130 @@
 import type { Project } from '@entities/project';
-import { ProjectSwitcher } from '@features/project/switch-project';
 import {
   ActionIcon,
-  Anchor,
-  Button,
-  Divider,
-  Flex,
+  Breadcrumbs,
   Group,
   Menu,
-  NavLink,
   Text,
-  Tooltip,
+  Anchor,
+  TextInput,
 } from '@mantine/core';
-import { navigation } from '@shared/lib/navigation';
 import {
   IconBrandGithub,
   IconFileCode,
-  IconFolders,
   IconHelp,
-  IconHierarchy,
-  IconPackage,
+  IconSearch,
+  IconCommand,
 } from '@tabler/icons-react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import styles from './TopNavigation.module.css';
 
 interface TopNavigationProps {
   project: Project | null;
+  collapsed?: boolean;
 }
 
-export function TopNavigation({ project }: TopNavigationProps) {
+export function TopNavigation({ project, collapsed }: TopNavigationProps) {
   const { location } = useRouterState();
   const pathname = location.pathname;
 
-  const navLinks = [
-    { label: 'Projects', to: '/projects', icon: <IconFolders size={16} /> },
-    { label: 'Packages', to: '/packages', icon: <IconPackage size={16} /> },
-    project
-      ? {
-          label: 'Files',
-          to: `/projects/${project.id}/tree`,
-          icon: <IconHierarchy size={16} />,
+  // Build breadcrumbs based on current path
+  const buildBreadcrumbs = () => {
+    const parts = pathname.split('/').filter(Boolean);
+    const crumbs: { label: string; to: string }[] = [];
+
+    if (parts[0] === 'projects') {
+      crumbs.push({ label: 'Projects', to: '/projects' });
+      if (project && parts.length > 1) {
+        crumbs.push({ label: project.name, to: `/projects/${project.id}` });
+        if (parts[2] === 'tree') {
+          crumbs.push({ label: 'Files', to: `/projects/${project.id}/tree` });
+        } else if (parts[2] === 'profiles' && parts[3]) {
+          crumbs.push({ label: 'Profile', to: pathname });
         }
-      : null,
-  ].filter(Boolean) as { label: string; to: string; icon: React.ReactNode }[];
+      }
+    } else if (parts[0] === 'packages') {
+      crumbs.push({ label: 'Packages', to: '/packages' });
+    } else if (parts[0] === 'settings') {
+      crumbs.push({ label: 'Settings', to: '/settings' });
+    }
+
+    return crumbs;
+  };
+
+  const breadcrumbs = buildBreadcrumbs();
 
   return (
     <div className={styles.container}>
-      <Group gap="md">
+      <Group gap="md" style={{ flex: 1 }}>
+        {/* Logo */}
         <Link to="/projects" className={styles.logo}>
-          <span className={styles.logoMark} aria-hidden="true">
-            <img src="/logo.png" alt="" className={styles.logoImage} />
-          </span>
-          <Text size="lg" fw={600}>
-            NITEN
-          </Text>
+          <img src="/logo.png" alt="" className={styles.logoImage} />
+          {!collapsed && (
+            <Text size="sm" fw={600} className={styles.logoText}>
+              NITEN
+            </Text>
+          )}
         </Link>
 
-        <Flex gap="md">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              component={Link}
-              to={link.to}
-              leftSection={link.icon}
-              variant="subtle"
-              aria-current={
-                pathname === link.to || pathname.startsWith(link.to) ? 'page' : undefined
-              }
-              className={styles.navButton}
-              label={link.label}
-            />
-          ))}
-        </Flex>
+        {/* Breadcrumbs */}
+        {breadcrumbs.length > 0 && (
+          <>
+            <span className={styles.divider} />
+            <Breadcrumbs
+              separator="/"
+              separatorMargin={6}
+              classNames={{ separator: styles.breadcrumbSeparator }}
+            >
+              {breadcrumbs.map((crumb, index) => (
+                <Anchor
+                  key={crumb.to}
+                  component={Link}
+                  to={crumb.to}
+                  size="sm"
+                  className={styles.breadcrumbLink}
+                  data-active={index === breadcrumbs.length - 1 || undefined}
+                >
+                  {crumb.label}
+                </Anchor>
+              ))}
+            </Breadcrumbs>
+          </>
+        )}
       </Group>
 
       {/* Right section - Actions */}
       <Group gap="xs">
-        <ProjectSwitcher />
-        <Divider orientation="vertical" />
+        {/* Search / Command Palette Trigger */}
+        <TextInput
+          placeholder="Search or jump to..."
+          size="xs"
+          leftSection={<IconSearch size={14} />}
+          rightSection={
+            <Group gap={4} className={styles.shortcutHint}>
+              <IconCommand size={12} />
+              <Text size="xs">K</Text>
+            </Group>
+          }
+          classNames={{ input: styles.searchInput }}
+          readOnly
+          onClick={() => {
+            // TODO: Open command palette
+          }}
+          style={{ width: 200 }}
+        />
 
         {/* Help Menu */}
-        <Menu position="bottom-end" width={220}>
+        <Menu position="bottom-end" width={200}>
           <Menu.Target>
-            <ActionIcon variant="subtle" size="lg" aria-label="Help">
-              <IconHelp size={20} />
+            <ActionIcon variant="subtle" size="md" radius="md" aria-label="Help">
+              <IconHelp size={18} />
             </ActionIcon>
           </Menu.Target>
 
           <Menu.Dropdown>
             <Menu.Label>Documentation</Menu.Label>
             <Menu.Item
-              leftSection={<IconFileCode size={16} />}
+              leftSection={<IconFileCode size={14} />}
               component="a"
               href="https://fhir-profile-builder.dev/docs"
               target="_blank"
@@ -98,7 +132,7 @@ export function TopNavigation({ project }: TopNavigationProps) {
               User Guide
             </Menu.Item>
             <Menu.Item
-              leftSection={<IconBrandGithub size={16} />}
+              leftSection={<IconBrandGithub size={14} />}
               component="a"
               href="https://github.com/your-org/fhir-profile-builder"
               target="_blank"

@@ -82,7 +82,9 @@ pub enum BulkExportFormat {
     Sd,
     /// Export as FSH only
     Fsh,
-    /// Export both formats
+    /// Export as FHIR Schema only
+    FhirSchema,
+    /// Export all formats
     Both,
 }
 
@@ -123,6 +125,8 @@ pub enum PreviewFormat {
     Sd,
     /// Preview as FSH
     Fsh,
+    /// Preview as FHIR Schema
+    FhirSchema,
 }
 
 // === Response Types ===

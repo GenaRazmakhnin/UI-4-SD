@@ -320,6 +320,14 @@ export const mockApi = {
     },
   },
 
+  // Mock resources API
+  resources: {
+    async getInputIt(_projectId: string, _profileId: string): Promise<unknown> {
+      await simulateDelay(100, 200);
+      return { resourceType: 'StructureDefinition', id: 'mock-input' };
+    },
+  },
+
   packages: {
     async list(): Promise<Package[]> {
       await simulateDelay(200, 400);
@@ -674,6 +682,26 @@ export const mockApi = {
           filename: `${profileId}.fsh`,
           contentType: 'text/plain; charset=utf-8',
           etag: 'mock-etag-456',
+        },
+      };
+    },
+
+    async toFHIRSchema(_projectId: string, profileId: string): Promise<SdExportResponse> {
+      await simulateDelay(300, 600);
+      return {
+        data: {
+          $schema: 'http://json-schema.org/draft-07/schema#',
+          type: 'object',
+          title: profileId,
+        },
+        metadata: {
+          resourceId: profileId,
+          name: profileId,
+          url: `http://example.org/fhir/StructureDefinition/${profileId}`,
+          fhirVersion: '4.0.1',
+          filename: `${profileId}.schema.json`,
+          contentType: 'application/schema+json',
+          etag: 'mock-etag-schema',
         },
       };
     },

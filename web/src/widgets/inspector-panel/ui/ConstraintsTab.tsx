@@ -3,12 +3,46 @@ import { FlagsEditor } from '@features/flags-editor';
 import { TypeConstraintEditor } from '@features/type-constraint-editor';
 import { Divider, Stack, Textarea, Title } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
+import { elementFieldChanged } from '@widgets/element-tree';
+import { profileChanged } from '@pages/editor/model';
+import { useState, useCallback } from 'react';
 
 interface ConstraintsTabProps {
   element: ElementNode;
 }
 
 export function ConstraintsTab({ element }: ConstraintsTabProps) {
+  const [short, setShort] = useState(element.short || '');
+  const [definition, setDefinition] = useState(element.definition || '');
+  const [comment, setComment] = useState(element.comment || '');
+
+  const handleFieldChange = useCallback(
+    (field: string, value: string) => {
+      elementFieldChanged({
+        elementPath: element.path,
+        field,
+        value,
+      });
+      profileChanged();
+    },
+    [element.path]
+  );
+
+  const handleShortChange = (value: string) => {
+    setShort(value);
+    handleFieldChange('short', value);
+  };
+
+  const handleDefinitionChange = (value: string) => {
+    setDefinition(value);
+    handleFieldChange('definition', value);
+  };
+
+  const handleCommentChange = (value: string) => {
+    setComment(value);
+    handleFieldChange('comment', value);
+  };
+
   return (
     <Stack gap="lg">
       {/* Cardinality Section */}
@@ -49,26 +83,26 @@ export function ConstraintsTab({ element }: ConstraintsTabProps) {
         <Stack gap="sm">
           <Textarea
             label="Short Description"
-            value={element.short || ''}
+            value={short}
             maxLength={254}
             placeholder="Brief description..."
-            disabled
+            onChange={(e) => handleShortChange(e.currentTarget.value)}
           />
 
           <Textarea
             label="Definition"
-            value={element.definition || ''}
+            value={definition}
             rows={4}
             placeholder="Detailed definition..."
-            disabled
+            onChange={(e) => handleDefinitionChange(e.currentTarget.value)}
           />
 
           <Textarea
             label="Comment"
-            value={element.comment || ''}
+            value={comment}
             rows={3}
             placeholder="Additional comments..."
-            disabled
+            onChange={(e) => handleCommentChange(e.currentTarget.value)}
           />
         </Stack>
       </section>

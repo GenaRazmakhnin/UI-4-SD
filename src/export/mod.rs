@@ -82,7 +82,8 @@ mod snapshot_generator;
 
 // Re-export main types
 pub use deterministic::{
-    sort_elements_by_path, to_canonical_json, to_pretty_json, DeterministicJsonBuilder,
+    DeterministicJsonBuilder, recursively_sort_value, sort_elements_by_path, to_canonical_json,
+    to_pretty_json,
 };
 pub use differential_generator::{DifferentialAnalyzer, DifferentialGenerator, DifferentialStats};
 pub use element_serializer::ElementSerializer;
@@ -90,7 +91,7 @@ pub use error::{
     ExportError, ExportResult, ExportResultWithWarnings, ExportWarning, ExportWarningCode,
 };
 pub use field_preservation::{
-    merge_original_sd_fields, FieldPreserver, UnknownFieldCollector, UnknownFieldInfo,
+    FieldPreserver, UnknownFieldCollector, UnknownFieldInfo, merge_original_sd_fields,
 };
 pub use sd_exporter::{ExportConfig, StructureDefinitionExporter};
 pub use snapshot_generator::{SnapshotConfig, SnapshotGenerator};

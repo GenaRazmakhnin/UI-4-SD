@@ -150,7 +150,8 @@ impl DeterministicJsonBuilder {
     /// Add a string field if not empty.
     pub fn add_string(&mut self, key: &str, value: &str) -> &mut Self {
         if !value.is_empty() {
-            self.fields.insert(key.to_string(), Value::String(value.to_string()));
+            self.fields
+                .insert(key.to_string(), Value::String(value.to_string()));
         }
         self
     }
@@ -159,7 +160,8 @@ impl DeterministicJsonBuilder {
     pub fn add_optional_string(&mut self, key: &str, value: Option<&str>) -> &mut Self {
         if let Some(v) = value {
             if !v.is_empty() {
-                self.fields.insert(key.to_string(), Value::String(v.to_string()));
+                self.fields
+                    .insert(key.to_string(), Value::String(v.to_string()));
             }
         }
         self
@@ -181,12 +183,17 @@ impl DeterministicJsonBuilder {
 
     /// Add a number field.
     pub fn add_number(&mut self, key: &str, value: impl Into<serde_json::Number>) -> &mut Self {
-        self.fields.insert(key.to_string(), Value::Number(value.into()));
+        self.fields
+            .insert(key.to_string(), Value::Number(value.into()));
         self
     }
 
     /// Add an optional number field.
-    pub fn add_optional_number<N: Into<serde_json::Number>>(&mut self, key: &str, value: Option<N>) -> &mut Self {
+    pub fn add_optional_number<N: Into<serde_json::Number>>(
+        &mut self,
+        key: &str,
+        value: Option<N>,
+    ) -> &mut Self {
         if let Some(v) = value {
             self.fields.insert(key.to_string(), Value::Number(v.into()));
         }
@@ -240,7 +247,8 @@ impl DeterministicJsonBuilder {
         }
 
         // Add any remaining fields alphabetically
-        let mut extra_fields: Vec<_> = self.fields
+        let mut extra_fields: Vec<_> = self
+            .fields
             .iter()
             .filter(|(k, _)| !self.field_order.contains(&k.as_str()))
             .collect();
@@ -352,7 +360,33 @@ pub fn to_canonical_json(value: &Value) -> Result<String, serde_json::Error> {
 
 /// Serialize to pretty-printed JSON with consistent formatting.
 pub fn to_pretty_json(value: &Value) -> Result<String, serde_json::Error> {
-    serde_json::to_string_pretty(value)
+    let sorted = recursively_sort_value(value);
+    serde_json::to_string_pretty(&sorted)
+}
+
+/// Recursively sort keys in a JSON Value to ensure deterministic output.
+///
+/// This is used to ensure that diffs are clean even when fields are merged
+/// from sources with different key ordering.
+pub fn recursively_sort_value(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut sorted_map = Map::new();
+            let mut keys: Vec<_> = map.keys().cloned().collect();
+            keys.sort();
+            for key in keys {
+                if let Some(val) = map.get(&key) {
+                    sorted_map.insert(key, recursively_sort_value(val));
+                }
+            }
+            Value::Object(sorted_map)
+        }
+        Value::Array(arr) => {
+            let sorted_arr = arr.iter().map(recursively_sort_value).collect();
+            Value::Array(sorted_arr)
+        }
+        _ => value.clone(),
+    }
 }
 
 #[cfg(test)]
@@ -372,7 +406,9 @@ mod tests {
 
         // Check order: resourceType should come before url, url before name, etc.
         let keys: Vec<&String> = result.keys().collect();
-        assert!(keys.iter().position(|k| *k == "resourceType") < keys.iter().position(|k| *k == "url"));
+        assert!(
+            keys.iter().position(|k| *k == "resourceType") < keys.iter().position(|k| *k == "url")
+        );
         assert!(keys.iter().position(|k| *k == "url") < keys.iter().position(|k| *k == "name"));
     }
 
@@ -388,13 +424,16 @@ mod tests {
 
         paths.sort_by(|a, b| compare_element_paths(a, b));
 
-        assert_eq!(paths, vec![
-            "Patient",
-            "Patient.identifier",
-            "Patient.name",
-            "Patient.name:official",
-            "Patient.name.family",
-        ]);
+        assert_eq!(
+            paths,
+            vec![
+                "Patient",
+                "Patient.identifier",
+                "Patient.name",
+                "Patient.name:official",
+                "Patient.name.family",
+            ]
+        );
     }
 
     #[test]

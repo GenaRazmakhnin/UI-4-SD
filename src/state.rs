@@ -11,9 +11,9 @@ use octofhir_canonical_manager::CanonicalManager;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{OnceCell, RwLock};
 
-use crate::api::registry_catalog::{create_registry_catalog, SharedRegistryCatalog};
-use crate::validation::ValidationResult;
 use crate::Config;
+use crate::api::registry_catalog::{SharedRegistryCatalog, create_registry_catalog};
+use crate::validation::ValidationResult;
 
 /// Shared application state accessible from all request handlers.
 #[derive(Clone)]
@@ -135,7 +135,14 @@ impl AppState {
         self.inner
             .canonical_manager
             .get_or_try_init(|| async {
-                let manager = CanonicalManager::with_default_config().await?;
+                // Initialize with parallel processing enabled
+                let mut config = octofhir_canonical_manager::config::FcmConfig::default();
+
+                // Set parallel workers to a reasonable default if not already set
+                // The library handles num_cpus internally, so this ensures it's explicitly active.
+                config.optimization.parallel_workers = 8;
+
+                let manager = CanonicalManager::new(config).await?;
                 Ok(Arc::new(manager))
             })
             .await

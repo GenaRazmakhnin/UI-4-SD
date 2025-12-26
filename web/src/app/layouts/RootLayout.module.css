@@ -1,11 +1,98 @@
 .appShell {
-  height: 100vh;
+  --sidebar-transition: 200ms ease;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface-0);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.navbar {
+  background: var(--color-surface-1);
+  border-right: 1px solid var(--color-border-default);
+  transition: width var(--sidebar-transition);
+}
+
+.navContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing-x1);
+}
+
+.navSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-half);
+}
+
+.navFooter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-half);
+  padding-top: var(--spacing-x1);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-x1);
+  padding: 10px 12px;
+  border-radius: var(--corner-corner-m);
+  color: var(--color-elements-assistive);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 150ms ease;
+  text-decoration: none;
+}
+
+.navItem:hover {
+  background: var(--color-surface-selected);
+  color: var(--color-elements-readable);
+}
+
+.navItem[data-active] {
+  background: var(--color-brand-100);
+  color: var(--color-brand-600);
+}
+
+.navItem[data-active]:hover {
+  background: var(--color-brand-200);
+}
+
+.navIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navLabel {
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collapseButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: var(--corner-corner-m);
+  color: var(--color-elements-assistive);
+  transition: all 150ms ease;
+}
+
+.collapseButton:hover {
+  background: var(--color-surface-selected);
+  color: var(--color-elements-readable);
 }
 
 .main {
-  height: calc(100vh - 56px);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  background: var(--color-surface-0);
+  min-height: 100%;
 }

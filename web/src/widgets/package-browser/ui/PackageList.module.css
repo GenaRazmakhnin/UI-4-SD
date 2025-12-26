@@ -1,11 +1,13 @@
 .packageCard {
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 150ms ease;
+  border-radius: var(--corner-corner-m);
 }
 
 .packageCard:hover {
-  border-color: var(--mantine-color-blue-4);
-  background-color: var(--mantine-color-blue-0);
+  border-color: var(--color-brand-300);
+  background-color: var(--color-brand-50);
+  transform: translateY(-1px);
 }
 
 .emptyState {
@@ -13,11 +15,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md);
+  padding: var(--spacing-x4) var(--spacing-x2);
   text-align: center;
   min-height: 200px;
 }
 
 .emptyIcon {
-  color: var(--mantine-color-gray-4);
+  color: var(--color-elements-assistive);
 }

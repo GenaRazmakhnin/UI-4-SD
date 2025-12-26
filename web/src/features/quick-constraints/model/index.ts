@@ -10,6 +10,9 @@ import {
   type QuickConstraintsPreferences,
   type RecentItem,
 } from '../lib/types';
+import { wizardOpened as openSlicingWizard } from '../../slicing-wizard/model';
+import { browserOpened as openBindingBrowser } from '../../binding-editor/model';
+import { pickerOpened as openExtensionPicker } from '../../extension-picker/model';
 
 // ============================================================================
 // Stores
@@ -140,6 +143,15 @@ export const contextMenuOpened = createEvent<{
 export const contextMenuClosed = createEvent();
 
 /**
+ * Internal events for execution logic
+ */
+const actionValidated = createEvent<{
+  actionId: QuickActionId;
+  element: ElementNode;
+  needsConfirmation: boolean;
+}>();
+
+/**
  * Toggle shortcut help overlay
  */
 export const shortcutHelpToggled = createEvent();
@@ -258,16 +270,13 @@ sample({
   filter: (element): element is ElementNode => element !== null,
   fn: (element, actionId) => {
     const action = QUICK_ACTIONS.find((a) => a.id === actionId);
-    if (action?.requiresConfirmation) {
-      return { actionId, element, needsConfirmation: true };
-    }
-    return { actionId, element, needsConfirmation: false };
+    return {
+      actionId,
+      element: element!,
+      needsConfirmation: action?.requiresConfirmation ?? false,
+    };
   },
-  target: createEvent<{
-    actionId: QuickActionId;
-    element: ElementNode;
-    needsConfirmation: boolean;
-  }>(),
+  target: actionValidated,
 });
 
 // Set pending action if confirmation needed
@@ -328,7 +337,7 @@ sample({
       'toggle-is-modifier': 'isModifier',
       'toggle-is-summary': 'isSummary',
     };
-    const flag = flagMap[actionId];
+    const flag = flagMap[actionId]!;
     const currentValue = element![flag] ?? false;
     return {
       profileId: 'current-profile', // TODO: Get from context
@@ -339,6 +348,34 @@ sample({
   },
   target: toggleFlagFx,
 });
+
+// Trigger Slicing Wizard
+sample({
+  clock: actionTriggered,
+  source: $localSelectedElement,
+  filter: (element, actionId) => element !== null && actionId === 'create-slice',
+  fn: (element) => ({ element: element! }),
+  target: openSlicingWizard,
+});
+
+// Trigger Binding Browser
+sample({
+  clock: actionTriggered,
+  source: $localSelectedElement,
+  filter: (element, actionId) => element !== null && actionId === 'set-binding',
+  target: openBindingBrowser,
+});
+
+// Trigger Extension Picker
+sample({
+  clock: actionTriggered,
+  source: $localSelectedElement,
+  filter: (element, actionId) => element !== null && actionId === 'add-extension',
+  target: openExtensionPicker,
+});
+
+// TODO: Implement other complex actions (constrain-type, add-pattern, add-invariant)
+// These would typically open search modals/wizards
 
 // ============================================================================
 // Persistence

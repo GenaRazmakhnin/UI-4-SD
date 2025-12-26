@@ -4,6 +4,15 @@ import { $selectedElement } from '@widgets/element-tree';
 import { createEffect, createEvent, createStore, sample } from 'effector';
 
 /**
+ * Picker open state
+ */
+export const pickerOpened = createEvent();
+export const pickerClosed = createEvent();
+export const $pickerOpen = createStore(false)
+  .on(pickerOpened, () => true)
+  .on(pickerClosed, () => false);
+
+/**
  * Search extensions effect
  */
 export const searchExtensionsFx = createEffect(
@@ -181,7 +190,7 @@ sample({
   filter: (element): element is ElementNode => element !== null,
   fn: (element, { extension }) => ({
     profileId: 'current-profile', // TODO: Get from profile context
-    elementPath: element.path,
+    elementPath: element!.path,
     extensionUrl: extension.url,
   }),
   target: addExtensionToElementFx,

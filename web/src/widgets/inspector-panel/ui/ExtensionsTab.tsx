@@ -1,15 +1,15 @@
-import { ExtensionPicker } from '@features/extension-picker';
+import { ExtensionPicker, $pickerOpen, pickerOpened, pickerClosed } from '@features/extension-picker';
 import { Alert, Badge, Button, Group, Stack, Text, Title } from '@mantine/core';
 import type { ElementNode } from '@shared/types';
 import { IconInfoCircle, IconPlus } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useUnit } from 'effector-react';
 
 interface ExtensionsTabProps {
   element: ElementNode;
 }
 
 export function ExtensionsTab({ element }: ExtensionsTabProps) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerOpenedValue = useUnit($pickerOpen);
 
   // TODO: Get actual extensions from element
   // For now, showing placeholder
@@ -28,7 +28,7 @@ export function ExtensionsTab({ element }: ExtensionsTabProps) {
 
       {/* Add Extension Button */}
       <Group>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => setPickerOpen(true)}>
+        <Button leftSection={<IconPlus size={16} />} onClick={() => pickerOpened()}>
           Add Extension
         </Button>
       </Group>
@@ -57,7 +57,7 @@ export function ExtensionsTab({ element }: ExtensionsTabProps) {
       )}
 
       {/* Extension Picker Modal */}
-      <ExtensionPicker opened={pickerOpen} onClose={() => setPickerOpen(false)} element={element} />
+      <ExtensionPicker opened={pickerOpenedValue} onClose={() => pickerClosed()} element={element} />
     </Stack>
   );
 }

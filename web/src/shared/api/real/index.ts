@@ -189,7 +189,7 @@ export const realApi = {
     async update(packageId: string): Promise<Package> {
       // Update means installing the latest version
       // The package ID without version will install latest
-      const nameOnly = packageId.split('@')[0];
+      const nameOnly = packageId.split('@')[0] ?? '';
       return apiClient.post<Package>(`/api/packages/${encodeURIComponent(nameOnly)}/install`);
     },
   },
@@ -413,6 +413,21 @@ export const realApi = {
       const queryString = params.toString();
       const url = `/api/projects/${projectId}/profiles/${profileId}/export/fsh${queryString ? `?${queryString}` : ''}`;
       return apiClient.get<FshExportResponse>(url);
+    },
+
+    /** Export profile as FHIR Schema */
+    async toFHIRSchema(
+      projectId: string,
+      profileId: string,
+      options?: FshExportOptions
+    ): Promise<SdExportResponse> {
+      const params = new URLSearchParams();
+      if (options?.persist) params.append('persist', 'true');
+      if (options?.force) params.append('force', 'true');
+
+      const queryString = params.toString();
+      const url = `/api/projects/${projectId}/profiles/${profileId}/export/schema${queryString ? `?${queryString}` : ''}`;
+      return apiClient.get<SdExportResponse>(url);
     },
 
     /** Preview profile without downloading */

@@ -2,16 +2,17 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--mantine-color-white);
+  background: var(--color-surface-0);
+  border-radius: var(--corner-corner-m);
 }
 
 .header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--mantine-color-white);
-  border-bottom: 1px solid var(--mantine-color-gray-3);
-  padding: var(--mantine-spacing-md);
+  background: var(--color-surface-0);
+  border-bottom: 1px solid var(--color-border-default);
+  padding: var(--spacing-x1point5);
 }
 
 .tabs {
@@ -31,9 +32,9 @@
   position: sticky;
   top: 0;
   z-index: 9;
-  background: var(--mantine-color-white);
-  border-bottom: 1px solid var(--mantine-color-gray-3);
-  padding: 0 var(--mantine-spacing-md);
+  background: var(--color-surface-1);
+  border-bottom: 1px solid var(--color-border-default);
+  padding: 0 var(--spacing-x1point5);
 }
 
 .tabsPanel {
@@ -44,23 +45,23 @@
 .scrollablePanel {
   height: 100%;
   overflow-y: auto;
-  padding: var(--mantine-spacing-md);
+  padding: var(--spacing-x1point5);
 }
 
-/* Smooth scrolling */
+/* Custom scrollbar styling */
 .scrollablePanel::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .scrollablePanel::-webkit-scrollbar-track {
-  background: var(--mantine-color-gray-0);
+  background: var(--color-surface-1);
 }
 
 .scrollablePanel::-webkit-scrollbar-thumb {
-  background: var(--mantine-color-gray-4);
-  border-radius: 4px;
+  background: var(--color-neutral-300);
+  border-radius: 3px;
 }
 
 .scrollablePanel::-webkit-scrollbar-thumb:hover {
-  background: var(--mantine-color-gray-5);
+  background: var(--color-neutral-400);
 }

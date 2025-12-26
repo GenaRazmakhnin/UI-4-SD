@@ -1,15 +1,14 @@
-import { ActionIcon, Badge, Group, Paper, Stack, Tabs, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Group, Paper, Tabs, Text, Tooltip } from '@mantine/core';
 import {
   IconArrowsMaximize,
   IconArrowsMinimize,
   IconCode,
   IconFileImport,
-  IconFlask2,
   IconSchema,
-  IconSparkles,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import { DiffView } from './DiffView';
+import { FhirSchemaPreview } from './FhirSchemaPreview';
 import { FSHPreview } from './FSHPreview';
 import { InputItPreview } from './InputItPreview';
 import styles from './PreviewPanel.module.css';
@@ -87,14 +86,6 @@ export function PreviewPanel({ projectId, profileId }: PreviewPanelProps) {
             <Group gap={6}>
               <IconSchema size={14} />
               <span>FHIR Schema</span>
-              <Badge
-                size="xs"
-                variant="gradient"
-                gradient={{ from: 'grape', to: 'pink', deg: 135 }}
-                leftSection={<IconSparkles size={8} />}
-              >
-                Soon
-              </Badge>
             </Group>
           </Tabs.Tab>
         </Tabs.List>
@@ -136,49 +127,14 @@ export function PreviewPanel({ projectId, profileId }: PreviewPanelProps) {
         </Tabs.Panel>
 
         <Tabs.Panel value="schema">
-          <FhirSchemaPreview />
+          <FhirSchemaPreview
+            projectId={projectId}
+            profileId={profileId}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={handleToggleFullscreen}
+          />
         </Tabs.Panel>
       </Tabs>
     </Paper>
-  );
-}
-
-/** FHIR Schema preview placeholder */
-function FhirSchemaPreview() {
-  return (
-    <div className={styles.schemaPreview}>
-      <Stack align="center" justify="center" gap="lg" h="100%">
-        <div className={styles.schemaIconWrapper}>
-          <IconSchema size={48} stroke={1.5} />
-        </div>
-        <Stack align="center" gap="xs">
-          <Group gap="sm">
-            <Text size="xl" fw={600}>
-              FHIR Schema
-            </Text>
-            <Badge
-              size="lg"
-              variant="gradient"
-              gradient={{ from: 'grape', to: 'pink', deg: 135 }}
-              leftSection={<IconSparkles size={12} />}
-            >
-              Coming Soon
-            </Badge>
-          </Group>
-          <Text size="sm" c="dimmed" ta="center" maw={400}>
-            Next-generation schema validation using the official FHIR Schema format. Faster, more
-            precise, and spec-compliant validation.
-          </Text>
-        </Stack>
-        <Group gap="xs" mt="md">
-          <Badge variant="light" color="grape" leftSection={<IconFlask2 size={12} />}>
-            Experimental
-          </Badge>
-          <Badge variant="light" color="blue">
-            JSON Schema Compatible
-          </Badge>
-        </Group>
-      </Stack>
-    </div>
   );
 }

@@ -15,6 +15,8 @@ export const previewKeys = {
     [...previewKeys.all, 'sdDiff', projectId, profileId] as const,
   fsh: (projectId: string, profileId: string) =>
     [...previewKeys.all, 'fsh', projectId, profileId] as const,
+  fhirSchema: (projectId: string, profileId: string) =>
+    [...previewKeys.all, 'fhirSchema', projectId, profileId] as const,
   inputIt: (projectId: string, profileId: string) =>
     [...previewKeys.all, 'inputIt', projectId, profileId] as const,
 };
@@ -35,7 +37,7 @@ export function useSDJsonPreview(projectId: string, profileId: string) {
     queryFn: async (): Promise<PreviewData> => {
       const response = await api.export.toSD(projectId, profileId);
       // API returns { data: {...}, metadata: {...} }
-      const sdData = response.data ?? response.content;
+      const sdData = response.data;
       const content = typeof sdData === 'string' ? sdData : JSON.stringify(sdData, null, 2);
       return {
         content,
@@ -55,7 +57,7 @@ export function useBaseSDJsonPreview(projectId: string, profileId: string) {
     queryKey: previewKeys.sdBase(projectId, profileId),
     queryFn: async (): Promise<PreviewData> => {
       const response = await api.export.toBaseSD(projectId, profileId);
-      const sdData = response.data ?? response.content;
+      const sdData = response.data;
       const content = typeof sdData === 'string' ? sdData : JSON.stringify(sdData, null, 2);
       return {
         content,
@@ -77,7 +79,7 @@ export function useDifferentialSDJsonPreview(projectId: string, profileId: strin
       const response = await api.export.toSD(projectId, profileId, {
         format: 'differential',
       });
-      const sdData = response.data ?? response.content;
+      const sdData = response.data;
       const content = typeof sdData === 'string' ? sdData : JSON.stringify(sdData, null, 2);
       return {
         content,
@@ -100,8 +102,28 @@ export function useFSHPreview(projectId: string, profileId: string) {
       const response = await api.export.toFSH(projectId, profileId);
       // API returns { data: string, metadata: {...} }
       return {
-        content: response.data ?? response.content ?? '',
+        content: response.data ?? '',
         filename: response.metadata?.filename ?? `${profileId}.fsh`,
+      };
+    },
+    enabled: !!projectId && !!profileId,
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Hook for fetching FHIR Schema preview
+ */
+export function useFHIRSchemaPreview(projectId: string, profileId: string) {
+  return useQuery({
+    queryKey: previewKeys.fhirSchema(projectId, profileId),
+    queryFn: async (): Promise<PreviewData> => {
+      const response = await api.export.toFHIRSchema(projectId, profileId);
+      const schemaData = response.data;
+      const content = typeof schemaData === 'string' ? schemaData : JSON.stringify(schemaData, null, 2);
+      return {
+        content,
+        filename: response.metadata?.filename ?? `${profileId}.schema.json`,
       };
     },
     enabled: !!projectId && !!profileId,
@@ -230,7 +252,7 @@ export function computeDiff(original: string, modified: string): DiffLine[] {
     } else if (origLine === modLine) {
       result.push({
         type: 'unchanged',
-        content: modLine,
+        content: modLine!,
         lineNumber: i + 1,
         originalLineNumber: i + 1,
       });
@@ -238,13 +260,13 @@ export function computeDiff(original: string, modified: string): DiffLine[] {
       // Line modified
       result.push({
         type: 'removed',
-        content: origLine,
+        content: origLine!,
         lineNumber: i + 1,
         originalLineNumber: i + 1,
       });
       result.push({
         type: 'added',
-        content: modLine,
+        content: modLine!,
         lineNumber: i + 1,
       });
     }

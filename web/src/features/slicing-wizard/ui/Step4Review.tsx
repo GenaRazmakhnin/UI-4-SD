@@ -115,23 +115,23 @@ export function Step4Review() {
             {wizardState.slices.length}
           </Badge>
         </Group>
-        <Stack gap="sm">
+        <Stack gap="xs">
           {wizardState.slices.map((slice, index) => (
             <div
               key={index}
               style={{
                 padding: '12px',
                 background: 'var(--mantine-color-green-0)',
-                borderRadius: 'var(--mantine-radius-sm)',
-                borderLeft: '3px solid var(--mantine-color-green-6)',
+                borderRadius: 'var(--mantine-radius-md)',
+                border: '1px solid var(--mantine-color-green-2)',
               }}
             >
               <Group justify="space-between" mb={4}>
                 <Group gap="xs">
-                  <Text size="sm" fw={600}>
+                  <Text size="sm" fw={700} c="green.9">
                     {slice.name}
                   </Text>
-                  <Badge size="sm" variant="light" color="green">
+                  <Badge size="sm" variant="filled" color="green">
                     {slice.min}..{slice.max}
                   </Badge>
                 </Group>

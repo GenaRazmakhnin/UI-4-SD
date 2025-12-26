@@ -35,7 +35,7 @@ export interface FshExportResponse {
 /** Preview response */
 export interface PreviewResponse {
   content: string;
-  format: 'sd' | 'fsh';
+  format: 'sd' | 'fsh' | 'fhirschema';
   highlighting?: SyntaxHighlighting;
   diagnostics?: ExportDiagnostic[];
 }
@@ -110,13 +110,13 @@ export interface FshExportOptions {
 }
 
 export interface BulkExportOptions {
-  format?: 'sd' | 'fsh' | 'both';
+  format?: 'sd' | 'fsh' | 'fhirschema' | 'both';
   structure?: 'flat' | 'packaged';
   pretty?: boolean;
 }
 
 export interface PreviewOptions {
-  format?: 'sd' | 'fsh';
+  format?: 'sd' | 'fsh' | 'fhirschema';
   highlight?: boolean;
 }
 

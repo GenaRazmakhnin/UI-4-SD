@@ -13,6 +13,7 @@ export {
   $selectedElementId,
   clearProfile,
   collapseAll,
+  elementFieldChanged,
   elementSelected,
   expandAll,
   filterChanged,

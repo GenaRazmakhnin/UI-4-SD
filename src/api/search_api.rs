@@ -5,11 +5,11 @@
 use std::collections::HashMap;
 
 use axum::{
+    Json, Router,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
-    Json, Router,
 };
 
 use crate::state::AppState;
@@ -102,8 +102,8 @@ async fn search_extensions(
         }
     };
 
-    // Build search query
-    let mut builder = manager.search().await;
+    // Build search query using generic search and filtering on StructureDefinition
+    let mut builder = manager.search().await.resource_type("StructureDefinition");
 
     if let Some(text) = &query.q {
         if !text.is_empty() {
@@ -111,16 +111,12 @@ async fn search_extensions(
         }
     }
 
-    // Filter to StructureDefinition for extensions
-    builder = builder.resource_type("StructureDefinition");
-
     if let Some(packages) = &query.package {
         for pkg in packages {
             builder = builder.package(pkg);
         }
     }
 
-    // Request more results since we'll filter further
     builder = builder.limit(query.limit.unwrap_or(50) * 3);
     if let Some(offset) = query.offset {
         builder = builder.offset(offset);
@@ -129,24 +125,19 @@ async fn search_extensions(
     match builder.execute().await {
         Ok(result) => {
             let limit = query.limit.unwrap_or(50);
-
-            // Filter to only extensions with context matching
             let extensions: Vec<ExtensionDto> = result
                 .resources
                 .into_iter()
-                .filter(|r| r.resource.resource_type == "StructureDefinition")
                 .filter(|r| {
-                    r.resource
-                        .content
-                        .get("type")
-                        .and_then(|v| v.as_str())
-                        .map(|t| t == "Extension")
-                        .unwrap_or(false)
+                    // Filter to only extensions using ResourceIndex fields
+                    r.index.sd_type.as_deref() == Some("Extension")
                 })
                 .filter_map(|r| {
-                    let contexts = extract_extension_contexts(&r.resource.content);
+                    let index = &r.index;
+                    let content = &r.resource.content;
 
                     // Apply context filters
+                    let contexts = extract_extension_contexts(content);
                     if !matches_context_filter(
                         &contexts,
                         query.context.as_deref(),
@@ -157,33 +148,22 @@ async fn search_extensions(
 
                     // Apply FHIR version filter if specified
                     if let Some(ref fhir_ver) = query.fhir_version {
-                        let res_fhir_ver = r
-                            .resource
-                            .content
-                            .get("fhirVersion")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        if !res_fhir_ver.starts_with(fhir_ver) {
+                        if !index.fhir_version.starts_with(fhir_ver) {
                             return None;
                         }
                     }
 
-                    let index = &r.index;
                     Some(ExtensionDto {
                         id: index.id.clone().unwrap_or_default(),
                         url: index.canonical_url.clone(),
                         name: index.name.clone().unwrap_or_default(),
-                        title: r
-                            .resource
-                            .content
+                        title: content
                             .get("title")
-                            .and_then(|v| v.as_str())
+                            .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from),
-                        description: r
-                            .resource
-                            .content
+                        description: content
                             .get("description")
-                            .and_then(|v| v.as_str())
+                            .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from),
                         package_name: index.package_name.clone(),
                         package_version: index.package_version.clone(),
@@ -197,14 +177,11 @@ async fn search_extensions(
             // Build facets
             let mut facets = FacetsDto::default();
             for ext in &extensions {
-                *facets
-                    .packages
-                    .entry(ext.package_name.clone())
-                    .or_insert(0) += 1;
+                *facets.packages.entry(ext.package_name.clone()).or_insert(0) += 1;
             }
 
             Json(SearchResponseWithFacets {
-                total_count: extensions.len(),
+                total_count: result.total_count,
                 results: extensions,
                 facets: Some(facets),
             })
@@ -238,8 +215,8 @@ async fn search_valuesets(
         }
     };
 
-    // Build search query
-    let mut builder = manager.search().await;
+    // Build search query using ValueSet resource type
+    let mut builder = manager.search().await.resource_type("ValueSet");
 
     if let Some(text) = &query.q {
         if !text.is_empty() {
@@ -247,15 +224,12 @@ async fn search_valuesets(
         }
     }
 
-    builder = builder.resource_type("ValueSet");
-
     if let Some(packages) = &query.package {
         for pkg in packages {
             builder = builder.package(pkg);
         }
     }
 
-    // Request more results for system filtering
     builder = builder.limit(query.limit.unwrap_or(50) * 2);
     if let Some(offset) = query.offset {
         builder = builder.offset(offset);
@@ -264,14 +238,16 @@ async fn search_valuesets(
     match builder.execute().await {
         Ok(result) => {
             let limit = query.limit.unwrap_or(50);
-
             let valuesets: Vec<ValueSetDto> = result
                 .resources
                 .into_iter()
                 .filter_map(|r| {
+                    let index = &r.index;
+                    let content = &r.resource.content;
+
                     // Apply system filter if specified
                     if let Some(ref system) = query.system {
-                        let has_system = check_valueset_uses_system(&r.resource.content, system);
+                        let has_system = check_valueset_uses_system(content, system);
                         if !has_system {
                             return None;
                         }
@@ -279,39 +255,26 @@ async fn search_valuesets(
 
                     // Apply FHIR version filter
                     if let Some(ref fhir_ver) = query.fhir_version {
-                        let res_fhir_ver = r
-                            .resource
-                            .content
-                            .get("fhirVersion")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        if !res_fhir_ver.starts_with(fhir_ver) {
+                        if !index.fhir_version.starts_with(fhir_ver) {
                             return None;
                         }
                     }
 
-                    let index = &r.index;
                     Some(ValueSetDto {
                         id: index.id.clone().unwrap_or_default(),
                         url: index.canonical_url.clone(),
                         name: index.name.clone().unwrap_or_default(),
-                        title: r
-                            .resource
-                            .content
+                        title: content
                             .get("title")
-                            .and_then(|v| v.as_str())
+                            .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from),
-                        description: r
-                            .resource
-                            .content
+                        description: content
                             .get("description")
-                            .and_then(|v| v.as_str())
+                            .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from),
-                        status: r
-                            .resource
-                            .content
+                        status: content
                             .get("status")
-                            .and_then(|v| v.as_str())
+                            .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from),
                         package_name: index.package_name.clone(),
                         package_version: index.package_version.clone(),
@@ -324,14 +287,11 @@ async fn search_valuesets(
             // Build facets
             let mut facets = FacetsDto::default();
             for vs in &valuesets {
-                *facets
-                    .packages
-                    .entry(vs.package_name.clone())
-                    .or_insert(0) += 1;
+                *facets.packages.entry(vs.package_name.clone()).or_insert(0) += 1;
             }
 
             Json(SearchResponseWithFacets {
-                total_count: valuesets.len(),
+                total_count: result.total_count,
                 results: valuesets,
                 facets: Some(facets),
             })
@@ -396,8 +356,8 @@ async fn search_profiles(
         }
     };
 
-    // Build search query
-    let mut builder = manager.search().await;
+    // Build search query using StructureDefinition resource type
+    let mut builder = manager.search().await.resource_type("StructureDefinition");
 
     if let Some(text) = &query.q {
         if !text.is_empty() {
@@ -405,15 +365,12 @@ async fn search_profiles(
         }
     }
 
-    builder = builder.resource_type("StructureDefinition");
-
     if let Some(packages) = &query.package {
         for pkg in packages {
             builder = builder.package(pkg);
         }
     }
 
-    // Request more results for filtering
     builder = builder.limit(query.limit.unwrap_or(50) * 3);
     if let Some(offset) = query.offset {
         builder = builder.offset(offset);
@@ -422,38 +379,32 @@ async fn search_profiles(
     match builder.execute().await {
         Ok(result) => {
             let limit = query.limit.unwrap_or(50);
-
             let profiles: Vec<ProfileDto> = result
                 .resources
                 .into_iter()
                 .filter_map(|r| {
+                    let index = &r.index;
                     let content = &r.resource.content;
 
-                    // Must be a resource profile (kind = "resource" and have derivation)
-                    let kind = content.get("kind").and_then(|v| v.as_str()).unwrap_or("");
-                    if kind != "resource" {
+                    // Must be a resource profile using ResourceIndex fields
+                    if index.sd_kind.as_deref() != Some("resource") {
                         return None;
                     }
 
-                    // Get derivation (must have one to be a profile)
-                    let derivation = content
-                        .get("derivation")
-                        .and_then(|v| v.as_str())
-                        .map(String::from);
-
+                    // Get derivation
+                    let derivation = index.sd_derivation.clone();
                     if derivation.is_none() {
                         return None;
                     }
 
                     // Skip extensions
-                    let type_val = content.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                    if type_val == "Extension" {
+                    if index.sd_type.as_deref() == Some("Extension") {
                         return None;
                     }
 
                     // Apply base type filter
                     if let Some(ref base_type) = query.base_type {
-                        if type_val != base_type {
+                        if index.sd_type.as_deref() != Some(base_type) {
                             return None;
                         }
                     }
@@ -467,29 +418,24 @@ async fn search_profiles(
 
                     // Apply FHIR version filter
                     if let Some(ref fhir_ver) = query.fhir_version {
-                        let res_fhir_ver = content
-                            .get("fhirVersion")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        if !res_fhir_ver.starts_with(fhir_ver) {
+                        if !index.fhir_version.starts_with(fhir_ver) {
                             return None;
                         }
                     }
 
-                    let index = &r.index;
                     Some(ProfileDto {
                         id: index.id.clone().unwrap_or_default(),
                         url: index.canonical_url.clone(),
                         name: index.name.clone().unwrap_or_default(),
                         title: content
                             .get("title")
-                            .and_then(|v| v.as_str())
+                            .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from),
                         description: content
                             .get("description")
-                            .and_then(|v| v.as_str())
+                            .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from),
-                        base_type: type_val.to_string(),
+                        base_type: index.sd_type.clone().unwrap_or_default(),
                         derivation,
                         package_name: index.package_name.clone(),
                         package_version: index.package_version.clone(),
@@ -513,7 +459,7 @@ async fn search_profiles(
             }
 
             Json(SearchResponseWithFacets {
-                total_count: profiles.len(),
+                total_count: result.total_count,
                 results: profiles,
                 facets: Some(facets),
             })
@@ -726,9 +672,7 @@ async fn search_resources(
                     let index = &r.index;
 
                     // Count for facets
-                    *type_counts
-                        .entry(index.resource_type.clone())
-                        .or_insert(0) += 1;
+                    *type_counts.entry(index.resource_type.clone()).or_insert(0) += 1;
                     *package_counts
                         .entry(index.package_name.clone())
                         .or_insert(0) += 1;

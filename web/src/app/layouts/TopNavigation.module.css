@@ -3,41 +3,79 @@
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  padding: 0 var(--spacing-md);
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-primary);
+  padding: 0 var(--spacing-x2);
+  gap: var(--spacing-x2);
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  color: var(--text-primary);
+  gap: var(--spacing-x1);
   text-decoration: none;
-  transition: opacity 150ms;
-}
-
-.logoMark {
-  width: 40px;
-  height: 40px;
-  overflow: hidden;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  color: var(--color-elements-readable);
 }
 
 .logoImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 25%;
-  transform: scale(1.35);
-  transform-origin: 50% 25%;
-  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
-.logo:hover {
-  opacity: 0.8;
+.logoText {
+  color: var(--color-logo-readable);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border-default);
+}
+
+.breadcrumbSeparator {
+  color: var(--color-elements-disabled);
+  font-size: var(--font-size-xs);
+}
+
+.breadcrumbLink {
+  color: var(--color-elements-assistive);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.breadcrumbLink:hover {
+  color: var(--color-elements-readable);
+  text-decoration: none;
+}
+
+.breadcrumbLink[data-active] {
+  color: var(--color-elements-readable);
+}
+
+.searchInput {
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--corner-corner-m);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.searchInput:hover {
+  border-color: var(--color-brand-300);
+  background: var(--color-surface-0);
+}
+
+.searchInput:focus {
+  border-color: var(--color-brand-600);
+  outline: none;
+}
+
+.shortcutHint {
+  padding: 2px 6px;
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--corner-corner-s);
+  color: var(--color-elements-assistive);
+  font-size: 10px;
+  gap: 2px;
 }
